@@ -5,7 +5,7 @@ Bookmark intelligence workspace for analyzing Twitter/X bookmarks with a local-f
 [![Vite](https://img.shields.io/badge/Vite-8-646CFF)](https://vite.dev/)
 [![React](https://img.shields.io/badge/React-19-61DAFB)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6)](https://www.typescriptlang.org/)
-[![Security Policies](https://img.shields.io/badge/Policies-enabled-black)](./POLICY_INDEX.md)
+[![Security Policies](https://img.shields.io/badge/Policies-enabled-black)](./docs/policies/POLICY_INDEX.md)
 
 ## What it does
 
@@ -42,17 +42,20 @@ x-bookie/
 │   ├── App.tsx
 │   ├── index.css
 │   └── main.tsx
-├── ACCESSIBILITY.md
 ├── AGENTS.md
-├── API.md
-├── AUTH.md
-├── DATABASE.md
-├── DEPLOYMENT.md
-├── ENV_VARIABLES.md
-├── INCIDENT_RESPONSE.md
-├── POLICY_INDEX.md
-├── SECURITY.md
-├── errors.md
+├── docs/
+│   ├── policies/
+│   │   ├── ACCESSIBILITY.md
+│   │   ├── API.md
+│   │   ├── AUTH.md
+│   │   ├── DATABASE.md
+│   │   ├── DEPLOYMENT.md
+│   │   ├── ENV_VARIABLES.md
+│   │   ├── INCIDENT_RESPONSE.md
+│   │   ├── POLICY_INDEX.md
+│   │   └── SECURITY.md
+│   └── reference/
+│       └── errors.md
 ├── eslint.config.js
 ├── index.html
 ├── package.json
@@ -97,16 +100,16 @@ npm run preview
 ## Documentation map
 
 - `AGENTS.md`: primary repo instructions for architecture, product direction, and policy workflow.
-- `POLICY_INDEX.md`: entrypoint to the repo policy set.
-- `SECURITY.md`: repo-wide security baseline and required checks.
-- `AUTH.md`: requirements for future auth, sessions, and authorization.
-- `API.md`: requirements for future backend or network-facing handlers.
-- `DATABASE.md`: requirements for future persistence and synced user data.
-- `ENV_VARIABLES.md`: rules for introducing and documenting env vars safely.
-- `DEPLOYMENT.md`: deployment posture and production rollout expectations.
-- `ACCESSIBILITY.md`: accessibility requirements for the review UI.
-- `INCIDENT_RESPONSE.md`: containment and recovery workflow for security incidents.
-- `errors.md`: lessons learned from bugs, bad assumptions, and security mistakes.
+- `docs/policies/POLICY_INDEX.md`: entrypoint to the repo policy set.
+- `docs/policies/SECURITY.md`: repo-wide security baseline and required checks.
+- `docs/policies/AUTH.md`: requirements for future auth, sessions, and authorization.
+- `docs/policies/API.md`: requirements for future backend or network-facing handlers.
+- `docs/policies/DATABASE.md`: requirements for future persistence and synced user data.
+- `docs/policies/ENV_VARIABLES.md`: rules for introducing and documenting env vars safely.
+- `docs/policies/DEPLOYMENT.md`: deployment posture and production rollout expectations.
+- `docs/policies/ACCESSIBILITY.md`: accessibility requirements for the review UI.
+- `docs/policies/INCIDENT_RESPONSE.md`: containment and recovery workflow for security incidents.
+- `docs/reference/errors.md`: lessons learned from bugs, bad assumptions, and security mistakes.
 
 ## Security baseline
 

@@ -6,7 +6,7 @@ Treat security requirements as non-optional.
 
 ## Scope And Precedence
 
-- This file supplements [AGENTS.md](./AGENTS.md); it does not replace it.
+- This file supplements [AGENTS.md](../../AGENTS.md); it does not replace it.
 - These rules should reinforce the product goal: a polished bookmark analysis app with a simple, intuitive workflow.
 - Do not use this policy set to justify generic enterprise boilerplate that fights the current product shape.
 - If a security control affects UX, implement the safest version that still fits the repo's architecture and document the tradeoff.
@@ -63,4 +63,4 @@ Treat security requirements as non-optional.
 - Do not open a public issue for an unpatched security vulnerability.
 - Report privately first.
 - Include reproduction steps, impacted files, and a short impact summary.
-- After remediation, document the lesson in [errors.md](./errors.md) when it should change future practice.
+- After remediation, document the lesson in [errors.md](../reference/errors.md) when it should change future practice.

@@ -4,7 +4,7 @@ This file is the entrypoint for the repository policy set.
 
 ## Precedence
 
-- [AGENTS.md](./AGENTS.md) is the primary repo instruction file.
+- [AGENTS.md](../../AGENTS.md) is the primary repo instruction file.
 - These policy docs are supplemental guardrails.
 - They must not override the product goal, UI direction, or deployability requirements unless a direct security issue requires a safer implementation.
 - When there is tension, preserve the product goal and solve it securely.
@@ -21,7 +21,7 @@ This file is the entrypoint for the repository policy set.
 
 ## Read These For Every Change
 
-- [AGENTS.md](./AGENTS.md)
+- [AGENTS.md](../../AGENTS.md)
 - [SECURITY.md](./SECURITY.md)
 - [ACCESSIBILITY.md](./ACCESSIBILITY.md)
 - [ENV_VARIABLES.md](./ENV_VARIABLES.md)

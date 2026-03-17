@@ -53,18 +53,18 @@ If the stack changes materially, update this file and `README.md`.
 
 Read for every change:
 
-- [POLICY_INDEX.md](./POLICY_INDEX.md)
-- [SECURITY.md](./SECURITY.md)
-- [ACCESSIBILITY.md](./ACCESSIBILITY.md)
-- [ENV_VARIABLES.md](./ENV_VARIABLES.md)
-- [DEPLOYMENT.md](./DEPLOYMENT.md)
+- [POLICY_INDEX.md](./docs/policies/POLICY_INDEX.md)
+- [SECURITY.md](./docs/policies/SECURITY.md)
+- [ACCESSIBILITY.md](./docs/policies/ACCESSIBILITY.md)
+- [ENV_VARIABLES.md](./docs/policies/ENV_VARIABLES.md)
+- [DEPLOYMENT.md](./docs/policies/DEPLOYMENT.md)
 
 Read when introducing new surface area:
 
-- [AUTH.md](./AUTH.md) before adding login, sessions, protected routes, or roles
-- [API.md](./API.md) before adding any network-facing handler or backend service
-- [DATABASE.md](./DATABASE.md) before adding persistence or synced user data
-- [INCIDENT_RESPONSE.md](./INCIDENT_RESPONSE.md) when handling a suspected security event
+- [AUTH.md](./docs/policies/AUTH.md) before adding login, sessions, protected routes, or roles
+- [API.md](./docs/policies/API.md) before adding any network-facing handler or backend service
+- [DATABASE.md](./docs/policies/DATABASE.md) before adding persistence or synced user data
+- [INCIDENT_RESPONSE.md](./docs/policies/INCIDENT_RESPONSE.md) when handling a suspected security event
 
 Required follow-through:
 
@@ -79,19 +79,19 @@ Required follow-through:
 | [README.md](./README.md) | Product overview and run instructions |
 | [src/App.tsx](./src/App.tsx) | Main application shell and current UX |
 | [src/lib/bookmarks.ts](./src/lib/bookmarks.ts) | Parsing, scoring, and categorization logic |
-| [POLICY_INDEX.md](./POLICY_INDEX.md) | Entry point for the policy set |
-| [SECURITY.md](./SECURITY.md) | Repo-wide security baseline |
-| [AUTH.md](./AUTH.md) | Rules for future auth and authorization work |
-| [API.md](./API.md) | Rules for future APIs or backend handlers |
-| [DATABASE.md](./DATABASE.md) | Rules for future persistence and synced user data |
-| [ENV_VARIABLES.md](./ENV_VARIABLES.md) | Rules for env var handling |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Deployment baseline |
-| [INCIDENT_RESPONSE.md](./INCIDENT_RESPONSE.md) | Security incident workflow |
-| [errors.md](./errors.md) | Lessons learned from bugs and production mistakes |
+| [POLICY_INDEX.md](./docs/policies/POLICY_INDEX.md) | Entry point for the policy set |
+| [SECURITY.md](./docs/policies/SECURITY.md) | Repo-wide security baseline |
+| [AUTH.md](./docs/policies/AUTH.md) | Rules for future auth and authorization work |
+| [API.md](./docs/policies/API.md) | Rules for future APIs or backend handlers |
+| [DATABASE.md](./docs/policies/DATABASE.md) | Rules for future persistence and synced user data |
+| [ENV_VARIABLES.md](./docs/policies/ENV_VARIABLES.md) | Rules for env var handling |
+| [DEPLOYMENT.md](./docs/policies/DEPLOYMENT.md) | Deployment baseline |
+| [INCIDENT_RESPONSE.md](./docs/policies/INCIDENT_RESPONSE.md) | Security incident workflow |
+| [errors.md](./docs/reference/errors.md) | Lessons learned from bugs and production mistakes |
 
 ## Errors And Learning
 
-- Check [errors.md](./errors.md) when you hit a recurring issue.
+- Check [errors.md](./docs/reference/errors.md) when you hit a recurring issue.
 - When you fix a bug that should influence future work, add a short entry with:
   - symptom
   - root cause
