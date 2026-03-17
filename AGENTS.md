@@ -44,6 +44,9 @@ If the stack changes materially, update this file and `README.md`.
 - Prefer typed helper functions for parsing, scoring, and transformations.
 - Keep business logic out of the UI when possible.
 - Avoid hidden coupling between local storage, UI state, and future server features.
+- Use Codex skills when the task requires them.
+  - If a request matches a Codex skill workflow or an applicable skill is explicitly required, follow that skill instead of improvising an ad hoc process.
+  - Treat skill-driven workflows as formal execution requirements for that class of task, especially for security-sensitive, deployment-sensitive, or tool-specific work.
 - Do not invent security boundaries in the client.
   - Hidden UI, localStorage flags, or client-only checks are not authorization.
 
