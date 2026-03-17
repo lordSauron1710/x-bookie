@@ -25,11 +25,39 @@ const callbackQuerySchema = z.object({
   error: z.string().min(1).optional(),
 })
 
-export function createApp(store: AppStore) {
+type AppDependencies = {
+  checkRateLimit: typeof checkRateLimit
+  createCodeVerifier: typeof createCodeVerifier
+  createCodeChallenge: typeof createCodeChallenge
+  buildAuthorizeUrl: typeof buildAuthorizeUrl
+  exchangeCodeForTokens: typeof exchangeCodeForTokens
+  fetchViewer: typeof fetchViewer
+  syncBookmarksForSession: typeof syncBookmarksForSession
+}
+
+const defaultDependencies: AppDependencies = {
+  checkRateLimit,
+  createCodeVerifier,
+  createCodeChallenge,
+  buildAuthorizeUrl,
+  exchangeCodeForTokens,
+  fetchViewer,
+  syncBookmarksForSession,
+}
+
+export function createApp(
+  store: AppStore,
+  dependencyOverrides: Partial<AppDependencies> = {},
+  config: typeof serverConfig = serverConfig,
+) {
   const app = express()
+  const dependencies: AppDependencies = {
+    ...defaultDependencies,
+    ...dependencyOverrides,
+  }
 
   app.disable('x-powered-by')
-  app.use(cookieParser(serverConfig.SESSION_COOKIE_SECRET))
+  app.use(cookieParser(config.SESSION_COOKIE_SECRET))
   app.use(express.json({ limit: '512kb' }))
 
   app.use((request, response, next) => {
@@ -51,14 +79,14 @@ export function createApp(store: AppStore) {
     const payload: SessionResponse = session
       ? {
           authenticated: true,
-          xAuthConfigured: serverConfig.xAuthConfigured,
+          xAuthConfigured: config.xAuthConfigured,
           account: session.account,
           bookmarkCount: (await store.getBookmarks(session.account.xUserId)).items.length,
           lastSyncedAt: (await store.getBookmarks(session.account.xUserId)).lastSyncedAt,
         }
       : {
           authenticated: false,
-          xAuthConfigured: serverConfig.xAuthConfigured,
+          xAuthConfigured: config.xAuthConfigured,
           account: null,
           bookmarkCount: 0,
           lastSyncedAt: null,
@@ -68,12 +96,12 @@ export function createApp(store: AppStore) {
   })
 
   app.get('/api/auth/x/start', async (request, response) => {
-    if (!serverConfig.xAuthConfigured) {
-      response.redirect(`${serverConfig.APP_ORIGIN}/?authError=${encodeURIComponent('X auth is not configured yet.')}`)
+    if (!config.xAuthConfigured) {
+      response.redirect(`${config.APP_ORIGIN}/?authError=${encodeURIComponent('X auth is not configured yet.')}`)
       return
     }
 
-    const limit = checkRateLimit(`auth-start:${request.ip}`, 20, 15 * 60 * 1000)
+    const limit = dependencies.checkRateLimit(`auth-start:${request.ip}`, 20, 15 * 60 * 1000)
     if (!limit.allowed) {
       response.status(429).json({
         error: {
@@ -84,53 +112,53 @@ export function createApp(store: AppStore) {
       return
     }
 
-    const verifier = createCodeVerifier()
-    const challenge = createCodeChallenge(verifier)
+    const verifier = dependencies.createCodeVerifier()
+    const challenge = dependencies.createCodeChallenge(verifier)
     const state = await store.createAuthTransaction(verifier)
 
-    setOAuthStateCookie(response, state, serverConfig.isProduction)
-    response.redirect(buildAuthorizeUrl(state, challenge))
+    setOAuthStateCookie(response, state, config.isProduction)
+    response.redirect(dependencies.buildAuthorizeUrl(state, challenge))
   })
 
   app.get('/api/auth/x/callback', async (request, response) => {
     const parsed = callbackQuerySchema.safeParse(request.query)
 
     if (!parsed.success) {
-      response.redirect(`${serverConfig.APP_ORIGIN}/?authError=${encodeURIComponent('Invalid X callback parameters.')}`)
+      response.redirect(`${config.APP_ORIGIN}/?authError=${encodeURIComponent('Invalid X callback parameters.')}`)
       return
     }
 
     if (parsed.data.error) {
-      clearOAuthStateCookie(response, serverConfig.isProduction)
-      response.redirect(`${serverConfig.APP_ORIGIN}/?authError=${encodeURIComponent(parsed.data.error)}`)
+      clearOAuthStateCookie(response, config.isProduction)
+      response.redirect(`${config.APP_ORIGIN}/?authError=${encodeURIComponent(parsed.data.error)}`)
       return
     }
 
     if (!parsed.data.code || !parsed.data.state) {
-      clearOAuthStateCookie(response, serverConfig.isProduction)
+      clearOAuthStateCookie(response, config.isProduction)
       response.redirect(
-        `${serverConfig.APP_ORIGIN}/?authError=${encodeURIComponent('X did not return a valid authorization code.')}`,
+        `${config.APP_ORIGIN}/?authError=${encodeURIComponent('X did not return a valid authorization code.')}`,
       )
       return
     }
 
     const cookieState = getOAuthStateCookie(request)
-    clearOAuthStateCookie(response, serverConfig.isProduction)
+    clearOAuthStateCookie(response, config.isProduction)
 
     if (!cookieState || cookieState !== parsed.data.state) {
-      response.redirect(`${serverConfig.APP_ORIGIN}/?authError=${encodeURIComponent('The X login state was invalid or expired.')}`)
+      response.redirect(`${config.APP_ORIGIN}/?authError=${encodeURIComponent('The X login state was invalid or expired.')}`)
       return
     }
 
     const transaction = await store.consumeAuthTransaction(parsed.data.state)
     if (!transaction) {
-      response.redirect(`${serverConfig.APP_ORIGIN}/?authError=${encodeURIComponent('The X sign-in session expired. Please try again.')}`)
+      response.redirect(`${config.APP_ORIGIN}/?authError=${encodeURIComponent('The X sign-in session expired. Please try again.')}`)
       return
     }
 
     try {
-      const tokens = await exchangeCodeForTokens(parsed.data.code, transaction.verifier)
-      const account = await fetchViewer(tokens.accessToken)
+      const tokens = await dependencies.exchangeCodeForTokens(parsed.data.code, transaction.verifier)
+      const account = await dependencies.fetchViewer(tokens.accessToken)
       const sessionId = await store.createSession(account, tokens)
       const session = await store.getSession(sessionId)
 
@@ -138,10 +166,10 @@ export function createApp(store: AppStore) {
         throw new Error('The app session could not be created.')
       }
 
-      setSessionCookie(response, session, serverConfig.isProduction)
-      response.redirect(`${serverConfig.APP_ORIGIN}/?auth=connected`)
+      setSessionCookie(response, session, config.isProduction)
+      response.redirect(`${config.APP_ORIGIN}/?auth=connected`)
     } catch {
-      response.redirect(`${serverConfig.APP_ORIGIN}/?authError=${encodeURIComponent('X sign-in failed. Check your app settings and try again.')}`)
+      response.redirect(`${config.APP_ORIGIN}/?authError=${encodeURIComponent('X sign-in failed. Check your app settings and try again.')}`)
     }
   })
 
@@ -151,7 +179,7 @@ export function createApp(store: AppStore) {
       await store.deleteSession(session.id)
     }
 
-    clearSessionCookie(response, serverConfig.isProduction)
+    clearSessionCookie(response, config.isProduction)
     response.json({ ok: true })
   })
 
@@ -189,7 +217,7 @@ export function createApp(store: AppStore) {
       return
     }
 
-    const limit = checkRateLimit(`bookmark-sync:${session.account.xUserId}`, 30, 15 * 60 * 1000)
+    const limit = dependencies.checkRateLimit(`bookmark-sync:${session.account.xUserId}`, 30, 15 * 60 * 1000)
     if (!limit.allowed) {
       response.status(429).json({
         error: {
@@ -201,7 +229,7 @@ export function createApp(store: AppStore) {
     }
 
     try {
-      const feed = await syncBookmarksForSession(session, store)
+      const feed = await dependencies.syncBookmarksForSession(session, store)
       const payload: SyncBookmarksResponse = {
         syncedCount: feed.items.length,
         totalStored: feed.items.length,

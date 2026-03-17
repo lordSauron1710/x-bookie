@@ -21,6 +21,24 @@ export default defineConfig([
     },
   },
   {
+    files: ['**/*.test.{ts,tsx}', 'vitest.setup.ts'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        afterAll: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        beforeEach: 'readonly',
+        describe: 'readonly',
+        expect: 'readonly',
+        test: 'readonly',
+        vi: 'readonly',
+      },
+    },
+  },
+  {
     files: ['server/**/*.ts', 'vite.config.ts'],
     languageOptions: {
       ecmaVersion: 2020,

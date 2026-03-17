@@ -142,6 +142,17 @@ npm run start
 
 `npm run start` serves the compiled Express server from `dist/server/server/index.js`.
 
+## Testing
+
+```bash
+npm test
+npm run test:coverage
+```
+
+- `npm test` runs the full Vitest suite across frontend and backend modules.
+- `npm run test:coverage` generates text and HTML coverage reports.
+- GitHub Actions runs lint, build, and coverage-backed tests on pushes to `main` and on pull requests.
+
 ## Environment variables
 
 See [.env.example](./.env.example) and [ENV_VARIABLES.md](./docs/policies/ENV_VARIABLES.md).
@@ -178,7 +189,7 @@ Important ones:
 ## Project status
 
 - Current state: X-only full-stack MVP with live auth routes, bookmark sync routes, a shared analysis UI, optional Postgres-backed persistence, and per-account local interest profiles.
-- Current limitation: bookmark analysis is still heuristic, frontend UI logic is still concentrated in large files, and automated coverage is still early.
+- Current limitation: bookmark analysis is still heuristic, and frontend UI logic is still concentrated in large files even though the automated test baseline now covers the main hooks, app shell flows, and backend auth/sync primitives.
 - Next milestone: decompose the UI and introduce a model-backed classifier behind the existing analysis contract.
 
 ## Documentation map
