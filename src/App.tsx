@@ -1,1082 +1,165 @@
-import {
-  useDeferredValue,
-  useEffect,
-  useState,
-  useTransition,
-  type CSSProperties,
-  type ReactNode,
-} from 'react'
+import { useTransition, type CSSProperties } from 'react'
+
 import './App.css'
-import { InterestIcon } from './components/InterestIcon'
+import { BookmarkFeedPanel } from './components/dashboard/BookmarkFeedPanel'
+import { InsightsPanel } from './components/dashboard/InsightsPanel'
+import { dashboardStyles } from './components/dashboard/styles'
+import { TaxonomyPanel } from './components/dashboard/TaxonomyPanel'
+import { useBookmarkClassification } from './hooks/useBookmarkClassification'
+import { useBookmarkDashboard } from './hooks/useBookmarkDashboard'
 import { useBookmarkSource } from './hooks/useBookmarkSource'
 import { useInterestProfile } from './hooks/useInterestProfile'
-import {
-  avatarColor,
-  buildInsightCopy,
-  buildVelocitySeries,
-  getInitials,
-  percent,
-  polylinePoints,
-  relativeTime,
-  topSources,
-} from './lib/appView'
-import { analyzeBookmarks, starterInterests, type AnalyzedBookmark } from './lib/bookmarks'
-
-const customStyles: Record<string, CSSProperties> = {
-  appContainer: {
-    display: 'grid',
-    gridTemplateColumns: '320px minmax(0, 1fr) 380px',
-    width: '100%',
-    minHeight: '100vh',
-    overflow: 'hidden',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    backgroundColor: '#F4F3F0',
-    color: '#000000',
-    fontSize: '14px',
-    WebkitFontSmoothing: 'antialiased',
-  },
-  column: {
-    display: 'flex',
-    flexDirection: 'column',
-    borderRight: '1px solid #000000',
-    minHeight: '100vh',
-    overflowY: 'auto',
-    backgroundColor: '#F4F3F0',
-  },
-  columnLast: {
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: '100vh',
-    overflowY: 'auto',
-    backgroundColor: '#F4F3F0',
-  },
-  viewHeader: {
-    padding: '16px 20px',
-    borderBottom: '1px solid #000000',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    position: 'sticky',
-    top: 0,
-    backgroundColor: '#F4F3F0',
-    zIndex: 10,
-  },
-  viewTitle: {
-    fontSize: '11px',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-  },
-  iconBtn: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '4px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#000000',
-  },
-  sectionLabel: {
-    fontSize: '12px',
-    fontWeight: 600,
-    padding: '20px 20px 12px',
-  },
-  categoryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '16px',
-    padding: '0 20px 20px',
-    borderBottom: '1px solid #D1D1D1',
-  },
-  categoryItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '6px',
-    cursor: 'pointer',
-    position: 'relative',
-    textAlign: 'center',
-  },
-  abstractIcon: {
-    width: '56px',
-    height: '56px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  categoryLabel: {
-    fontSize: '11px',
-    color: '#888888',
-    transition: 'color 0.2s ease',
-  },
-  categoryLabelActive: {
-    fontSize: '11px',
-    color: '#000000',
-    fontWeight: 500,
-  },
-  categoryCount: {
-    fontSize: '10px',
-    color: '#888888',
-  },
-  iconBg: {
-    position: 'absolute',
-    width: '80px',
-    height: '80px',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    opacity: 0,
-    transition: 'opacity 0.3s ease',
-    zIndex: 1,
-    filter: 'blur(12px)',
-  },
-  searchBar: {
-    padding: '12px 20px',
-    borderBottom: '1px solid #000000',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-  },
-  searchInput: {
-    flex: 1,
-    background: 'none',
-    border: 'none',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    fontSize: '14px',
-    outline: 'none',
-    color: '#000000',
-  },
-  infoBar: {
-    padding: '10px 20px',
-    borderBottom: '1px solid #D1D1D1',
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: '12px',
-    alignItems: 'center',
-    color: '#666666',
-    fontSize: '12px',
-  },
-  bookmarkList: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  bookmarkItem: {
-    display: 'flex',
-    padding: '20px',
-    borderBottom: '1px solid #000000',
-    gap: '16px',
-    color: 'inherit',
-    cursor: 'pointer',
-    backgroundColor: 'transparent',
-    transition: 'background-color 0.2s',
-  },
-  authorAvatar: {
-    width: '48px',
-    height: '48px',
-    flexShrink: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 700,
-    fontSize: '14px',
-    border: '1px solid #000000',
-  },
-  tweetContentWrapper: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  tweetHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    gap: '12px',
-  },
-  authorName: {
-    fontWeight: 600,
-    fontSize: '14px',
-  },
-  authorHandle: {
-    color: '#888888',
-    fontSize: '13px',
-    marginLeft: '6px',
-  },
-  tweetMeta: {
-    fontSize: '12px',
-    color: '#888888',
-  },
-  tweetText: {
-    fontSize: '14px',
-    lineHeight: 1.5,
-    color: '#000000',
-  },
-  tweetActions: {
-    display: 'flex',
-    gap: '12px',
-    flexWrap: 'wrap',
-    marginTop: '2px',
-  },
-  actionStat: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '12px',
-    color: '#666666',
-    border: '1px solid #000000',
-    padding: '3px 8px',
-    borderRadius: '999px',
-  },
-  itemTag: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '28px',
-    height: '28px',
-    border: '1px solid #000000',
-    marginTop: '2px',
-  },
-  analysisSection: {
-    padding: '20px',
-    borderBottom: '1px solid #000000',
-  },
-  segmentControl: {
-    display: 'flex',
-    border: '1px solid #000000',
-    borderRadius: '20px',
-    overflow: 'hidden',
-    marginBottom: '24px',
-  },
-  segmentBtn: {
-    flex: 1,
-    background: 'none',
-    border: 'none',
-    padding: '8px 0',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    fontSize: '12px',
-    fontWeight: 500,
-    color: '#000000',
-    cursor: 'pointer',
-    borderRight: '1px solid #000000',
-    transition: 'all 0.2s',
-  },
-  segmentBtnActive: {
-    flex: 1,
-    border: 'none',
-    padding: '8px 0',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    fontSize: '12px',
-    fontWeight: 500,
-    cursor: 'pointer',
-    borderRight: '1px solid #000000',
-    transition: 'all 0.2s',
-    backgroundColor: '#000000',
-    color: '#F4F3F0',
-  },
-  segmentBtnLast: {
-    flex: 1,
-    background: 'none',
-    border: 'none',
-    padding: '8px 0',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    fontSize: '12px',
-    fontWeight: 500,
-    color: '#000000',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  },
-  segmentBtnLastActive: {
-    flex: 1,
-    border: 'none',
-    padding: '8px 0',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    fontSize: '12px',
-    fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    backgroundColor: '#000000',
-    color: '#F4F3F0',
-  },
-  chartContainer: {
-    width: '100%',
-    height: '200px',
-    position: 'relative',
-    marginBottom: '16px',
-  },
-  chartGrid: {
-    position: 'absolute',
-    inset: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    pointerEvents: 'none',
-  },
-  chartGridLine: {
-    borderBottom: '1px dashed #888888',
-    width: '100%',
-  },
-  chartSvg: {
-    width: '100%',
-    height: '100%',
-    position: 'relative',
-    zIndex: 2,
-    overflow: 'visible',
-  },
-  insightText: {
-    fontSize: '13px',
-    lineHeight: 1.5,
-    color: '#666666',
-  },
-  tagList: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px',
-    padding: '0 20px 20px',
-  },
-  tagPill: {
-    border: '1px solid #000000',
-    padding: '4px 12px',
-    borderRadius: '16px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    backgroundColor: 'transparent',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    color: '#000000',
-  },
-  tagPillActive: {
-    border: '1px solid #000000',
-    padding: '4px 12px',
-    borderRadius: '16px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    backgroundColor: '#000000',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-    color: '#F4F3F0',
-  },
-  actionRow: {
-    display: 'flex',
-    gap: '8px',
-    padding: '0 20px 16px',
-    flexWrap: 'wrap',
-  },
-  primaryButton: {
-    border: '1px solid #000000',
-    backgroundColor: '#000000',
-    color: '#F4F3F0',
-    padding: '9px 12px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    fontWeight: 600,
-  },
-  secondaryButton: {
-    border: '1px solid #000000',
-    backgroundColor: 'transparent',
-    color: '#000000',
-    padding: '9px 12px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    fontWeight: 500,
-  },
-  hiddenInput: {
-    display: 'none',
-  },
-  statusBox: {
-    margin: '0 20px 16px',
-    padding: '12px',
-    border: '1px solid #000000',
-    fontSize: '12px',
-    lineHeight: 1.5,
-    color: '#666666',
-  },
-  pasteArea: {
-    margin: '0 20px 16px',
-    width: 'calc(100% - 40px)',
-    minHeight: '108px',
-    border: '1px solid #000000',
-    backgroundColor: 'transparent',
-    padding: '12px',
-    fontSize: '12px',
-    resize: 'vertical',
-    outline: 'none',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-  },
-  compactInput: {
-    margin: '0 20px 10px',
-    width: 'calc(100% - 40px)',
-    border: '1px solid #000000',
-    backgroundColor: 'transparent',
-    padding: '10px 12px',
-    fontSize: '12px',
-    outline: 'none',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-  },
-  helperText: {
-    fontSize: '12px',
-    color: '#666666',
-    padding: '0 20px 16px',
-    lineHeight: 1.5,
-  },
-  detailCard: {
-    border: '1px solid #000000',
-    padding: '14px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  detailTitle: {
-    fontSize: '13px',
-    fontWeight: 600,
-  },
-  detailMeta: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '8px',
-  },
-  detailLabel: {
-    fontSize: '11px',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: '#666666',
-  },
-  detailBody: {
-    fontSize: '14px',
-    lineHeight: 1.6,
-  },
-  detailSelect: {
-    width: '100%',
-    border: '1px solid #000000',
-    backgroundColor: 'transparent',
-    padding: '10px 12px',
-    fontSize: '12px',
-    outline: 'none',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-  },
-  sourceList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  sourceRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottom: '1px dashed #D1D1D1',
-    paddingBottom: '8px',
-  },
-  sourceHandle: {
-    fontWeight: 500,
-    fontSize: '13px',
-  },
-  sourceCount: {
-    color: '#888888',
-    fontSize: '13px',
-  },
-  emptyState: {
-    padding: '28px 20px',
-    color: '#666666',
-    fontSize: '13px',
-    lineHeight: 1.6,
-  },
-}
-
-const gradients = [
-  'radial-gradient(circle, rgba(255,59,48,0.8) 0%, rgba(255,59,48,0) 70%)',
-  'radial-gradient(circle, rgba(0,122,255,0.8) 0%, rgba(0,122,255,0) 70%)',
-  'radial-gradient(circle, rgba(255,204,0,0.8) 0%, rgba(255,204,0,0) 70%)',
-  'radial-gradient(circle, rgba(52,199,89,0.8) 0%, rgba(52,199,89,0) 70%)',
-  'radial-gradient(circle, rgba(175,82,222,0.8) 0%, rgba(175,82,222,0) 70%)',
-  'radial-gradient(circle, rgba(90,200,250,0.8) 0%, rgba(90,200,250,0) 70%)',
-]
-
-type CategoryItemProps = {
-  label: string
-  count: number
-  icon: ReactNode
-  gradient: string
-  isActive: boolean
-  onClick: () => void
-}
-
-function CategoryItem({
-  label,
-  count,
-  icon,
-  gradient,
-  isActive,
-  onClick,
-}: CategoryItemProps) {
-  const [hovered, setHovered] = useState(false)
-  const isHighlighted = isActive || hovered
-
-  return (
-    <div
-      style={customStyles.categoryItem}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div
-        style={{
-          ...customStyles.iconBg,
-          background: gradient,
-          opacity: isHighlighted ? 0.6 : 0,
-        }}
-      />
-      <div style={customStyles.abstractIcon}>{icon}</div>
-      <span style={isHighlighted ? customStyles.categoryLabelActive : customStyles.categoryLabel}>
-        {label}
-      </span>
-      <span style={customStyles.categoryCount}>{count} saved</span>
-    </div>
-  )
-}
-
-type FilterPillProps = {
-  label: string
-  active: boolean
-  onClick: () => void
-}
-
-function FilterPill({ label, active, onClick }: FilterPillProps) {
-  const [hovered, setHovered] = useState(false)
-
-  return (
-    <button
-      style={{
-        ...(active ? customStyles.tagPillActive : customStyles.tagPill),
-        backgroundColor: active ? '#000000' : hovered ? 'rgba(0,0,0,0.05)' : 'transparent',
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={onClick}
-    >
-      {label}
-    </button>
-  )
-}
-
-type BookmarkItemProps = {
-  bookmark: AnalyzedBookmark
-  isSelected: boolean
-  icon: ReactNode
-  onClick: () => void
-}
-
-function BookmarkItem({ bookmark, isSelected, icon, onClick }: BookmarkItemProps) {
-  const [hovered, setHovered] = useState(false)
-  const excerpt =
-    bookmark.text.length > 210 ? `${bookmark.text.slice(0, 210).trim()}...` : bookmark.text
-
-  return (
-    <div
-      style={{
-        ...customStyles.bookmarkItem,
-        backgroundColor: isSelected ? 'rgba(0,0,0,0.05)' : hovered ? 'rgba(0,0,0,0.03)' : 'transparent',
-      }}
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div
-        style={{
-          ...customStyles.authorAvatar,
-          backgroundColor: avatarColor(bookmark.author),
-        }}
-      >
-        {getInitials(bookmark.author)}
-      </div>
-
-      <div style={customStyles.tweetContentWrapper}>
-        <div style={customStyles.tweetHeader}>
-          <div>
-            <span style={customStyles.authorName}>{bookmark.author}</span>
-            <span style={customStyles.authorHandle}>
-              {bookmark.handle ? `@${bookmark.handle}` : 'Imported'}
-            </span>
-          </div>
-          <span style={customStyles.tweetMeta}>{relativeTime(bookmark.createdAt)}</span>
-        </div>
-
-        <div style={customStyles.tweetText}>{excerpt}</div>
-
-        <div style={customStyles.tweetActions}>
-          <span style={customStyles.actionStat}>{bookmark.matchedInterestLabel}</span>
-          <span style={customStyles.actionStat}>{percent(bookmark.confidence)}</span>
-          <span style={customStyles.actionStat}>{bookmark.actionLane}</span>
-          <span style={customStyles.actionStat}>{bookmark.contentType}</span>
-        </div>
-
-        <div style={customStyles.itemTag}>{icon}</div>
-      </div>
-    </div>
-  )
-}
+import { starterInterests, type InterestDefinition } from './lib/bookmarks'
 
 function App() {
   const { bookmarks, session, statusMessage, isBootstrapping, isSyncing, connectX, signOut, syncFromX } =
     useBookmarkSource()
   const storageScope = session?.account?.xUserId ?? 'anonymous'
-  const { activeInterests, overrides, profileMessage, addCustomInterest, clearOverride, setOverride, toggleStarterInterest } =
-    useInterestProfile(storageScope)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [activeCategoryId, setActiveCategoryId] = useState('all')
-  const [activeType, setActiveType] = useState('All')
-  const [activeSegment, setActiveSegment] = useState<'Week' | 'Month' | 'Year'>('Month')
-  const [selectedBookmarkId, setSelectedBookmarkId] = useState<string | null>(null)
-  const [customInterest, setCustomInterest] = useState('')
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth)
-  const [isPending, startTransition] = useTransition()
-
-  const deferredSearch = useDeferredValue(searchTerm)
-  const analysis = analyzeBookmarks(bookmarks, activeInterests, overrides)
-  const effectiveCategoryId =
-    activeCategoryId === 'all' || analysis.stats.some((stat) => stat.interestId === activeCategoryId)
-      ? activeCategoryId
-      : 'all'
-
-  const contentTypeOptions = ['All', ...Array.from(new Set(analysis.bookmarks.map((bookmark) => bookmark.contentType)))]
-
-  const visibleBookmarks = analysis.bookmarks.filter((bookmark) => {
-    const matchesCategory =
-      effectiveCategoryId === 'all' ? true : bookmark.matchedInterestId === effectiveCategoryId
-    const matchesType = activeType === 'All' ? true : bookmark.contentType === activeType
-    const matchesSearch =
-      !deferredSearch ||
-      `${bookmark.text} ${bookmark.author} ${bookmark.handle} ${bookmark.matchedInterestLabel}`
-        .toLowerCase()
-        .includes(deferredSearch.toLowerCase())
-
-    return matchesCategory && matchesType && matchesSearch
+  const {
+    activeInterests,
+    overrides,
+    profileMessage,
+    addCustomInterest,
+    clearOverride,
+    setOverride,
+    toggleStarterInterest,
+  } = useInterestProfile(storageScope)
+  const { suggestions, statusMessage: classificationStatusMessage, isClassifying } = useBookmarkClassification({
+    bookmarks,
+    interests: activeInterests,
+    classificationMode: session?.classificationMode ?? 'heuristic',
+    isAuthenticated: Boolean(session?.authenticated && session.account),
   })
-
-  const effectiveSelectedBookmarkId =
-    selectedBookmarkId && visibleBookmarks.some((bookmark) => bookmark.id === selectedBookmarkId)
-      ? selectedBookmarkId
-      : (visibleBookmarks[0]?.id ?? null)
-
-  const selectedBookmark =
-    visibleBookmarks.find((bookmark) => bookmark.id === effectiveSelectedBookmarkId) ?? null
-
-  const chartData = buildVelocitySeries(analysis.bookmarks, activeSegment)
-  const sourceSummary = topSources(analysis.bookmarks)
-  const isCompact = viewportWidth < 1024
-
-  useEffect(() => {
-    const handleResize = () => setViewportWidth(window.innerWidth)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  function handleAddCustomInterest() {
-    const pendingLabel = customInterest
-
-    startTransition(() => {
-      const added = addCustomInterest(pendingLabel)
-      if (added) {
-        setCustomInterest('')
-      }
-    })
-  }
+  const [isPending, startTransition] = useTransition()
+  const dashboard = useBookmarkDashboard({
+    bookmarks,
+    activeInterests,
+    overrides,
+    classificationSuggestions: suggestions,
+    isAuthenticated: Boolean(session?.authenticated),
+  })
 
   const canConnectX = Boolean(session?.xAuthConfigured && !session?.authenticated && !isBootstrapping)
   const canSyncX = Boolean(session?.authenticated && session.account)
+  const connectButtonLabel =
+    session?.authenticated && session.account ? `Connected @${session.account.username}` : 'Connect X'
   const accountStatusCopy = !session?.xAuthConfigured
     ? 'Set the X server env vars before Connect X can run.'
     : session?.authenticated && session.account
       ? `Connected as @${session.account.username}. Syncing pulls the latest bookmarked posts from X into your app session store.`
       : 'Connect X to load your live bookmarks and replace the empty local shell.'
 
-  const categoryTiles = [
-    {
-      id: 'all',
-      label: 'All',
-      count: analysis.bookmarks.length,
-      icon: <InterestIcon interestId="review-later" />,
-      gradient: gradients[5],
-    },
-    ...analysis.stats.map((stat, index) => ({
-      id: stat.interestId,
-      label: stat.label,
-      count: stat.count,
-      icon: <InterestIcon interestId={stat.interestId} />,
-      gradient: gradients[index % gradients.length],
-    })),
-  ]
+  function handleAddCustomInterest() {
+    const pendingLabel = dashboard.customInterest
+
+    startTransition(() => {
+      const added = addCustomInterest(pendingLabel)
+      if (added) {
+        dashboard.setCustomInterest('')
+      }
+    })
+  }
+
+  function handleToggleStarterInterest(interest: InterestDefinition) {
+    startTransition(() => {
+      toggleStarterInterest(interest)
+    })
+  }
+
+  function handleSetOverride(bookmarkId: string, interestId: string) {
+    startTransition(() => {
+      setOverride(bookmarkId, interestId)
+    })
+  }
+
+  function handleClearOverride(bookmarkId: string) {
+    startTransition(() => {
+      clearOverride(bookmarkId)
+    })
+  }
 
   const appContainerStyle: CSSProperties = {
-    ...customStyles.appContainer,
-    gridTemplateColumns: isCompact ? '1fr' : '320px minmax(0, 1fr) 380px',
-    overflow: isCompact ? 'visible' : 'hidden',
+    ...dashboardStyles.appContainer,
+    gridTemplateColumns: dashboard.isCompact ? '1fr' : '320px minmax(0, 1fr) 380px',
+    overflow: dashboard.isCompact ? 'visible' : 'hidden',
   }
 
   const columnStyle: CSSProperties = {
-    ...customStyles.column,
-    borderRight: isCompact ? 'none' : '1px solid #000000',
-    minHeight: isCompact ? 'auto' : '100vh',
-    overflowY: isCompact ? 'visible' : 'auto',
+    ...dashboardStyles.column,
+    borderRight: dashboard.isCompact ? 'none' : '1px solid #000000',
+    minHeight: dashboard.isCompact ? 'auto' : '100vh',
+    overflowY: dashboard.isCompact ? 'visible' : 'auto',
   }
 
   const columnLastStyle: CSSProperties = {
-    ...customStyles.columnLast,
-    minHeight: isCompact ? 'auto' : '100vh',
-    overflowY: isCompact ? 'visible' : 'auto',
-    borderTop: isCompact ? '1px solid #000000' : 'none',
+    ...dashboardStyles.columnLast,
+    minHeight: dashboard.isCompact ? 'auto' : '100vh',
+    overflowY: dashboard.isCompact ? 'visible' : 'auto',
+    borderTop: dashboard.isCompact ? '1px solid #000000' : 'none',
   }
-
-  const segments: Array<'Week' | 'Month' | 'Year'> = ['Week', 'Month', 'Year']
-  const emptyStateMessage =
-    bookmarks.length === 0
-      ? session?.authenticated
-        ? 'Sync bookmarks from X to start sorting your feed.'
-        : 'Connect X to load your bookmarks.'
-      : 'No bookmarks match the current filters. Change the category, content type, or search term.'
-  const infoBarPrimary = analysis.bookmarks.length > 0 ? `${analysis.summary.categorized} auto-categorized` : 'No bookmarks loaded yet'
-  const infoBarSecondary =
-    analysis.bookmarks.length > 0 ? `${analysis.summary.topInterestLabel} is leading` : 'Connect and sync X to populate the feed'
 
   return (
     <div style={appContainerStyle}>
-      <div style={columnStyle}>
-        <div style={customStyles.viewHeader}>
-          <span style={customStyles.viewTitle}>Taxonomy</span>
-          <button
-            style={customStyles.iconBtn}
-            onClick={() => {
-              if (canSyncX) {
-                void syncFromX()
-                return
-              }
+      <TaxonomyPanel
+        columnStyle={columnStyle}
+        activeCategoryId={dashboard.activeCategoryId}
+        categoryTiles={dashboard.categoryTiles}
+        starterInterests={starterInterests}
+        activeInterests={activeInterests}
+        contentTypeOptions={dashboard.contentTypeOptions}
+        activeType={dashboard.activeType}
+        customInterest={dashboard.customInterest}
+        canConnectX={canConnectX}
+        canSyncX={canSyncX}
+        connectButtonLabel={connectButtonLabel}
+        accountStatusCopy={accountStatusCopy}
+        statusMessage={statusMessage}
+        profileMessage={profileMessage}
+        classificationStatusMessage={
+          isClassifying ? 'Refreshing model-backed suggestions...' : classificationStatusMessage
+        }
+        isSyncing={isSyncing}
+        isPending={isPending}
+        onConnectX={connectX}
+        onSyncFromX={() => {
+          void syncFromX()
+        }}
+        onSignOut={() => {
+          void signOut()
+        }}
+        onCategorySelect={dashboard.setActiveCategoryId}
+        onCustomInterestChange={dashboard.setCustomInterest}
+        onAddCustomInterest={handleAddCustomInterest}
+        onToggleStarterInterest={handleToggleStarterInterest}
+        onTypeSelect={dashboard.setActiveType}
+      />
 
-              if (canConnectX) {
-                connectX()
-              }
-            }}
-            aria-label={canSyncX ? 'Sync bookmarks from X' : 'Connect X'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
-              <path d="M3 3v5h5" />
-            </svg>
-          </button>
-        </div>
+      <BookmarkFeedPanel
+        columnStyle={columnStyle}
+        searchTerm={dashboard.searchTerm}
+        visibleBookmarks={dashboard.visibleBookmarks}
+        selectedBookmarkId={dashboard.selectedBookmarkId}
+        infoBarPrimary={dashboard.infoBarPrimary}
+        infoBarSecondary={dashboard.infoBarSecondary}
+        emptyStateMessage={dashboard.emptyStateMessage}
+        onSearchTermChange={dashboard.setSearchTerm}
+        onSelectBookmark={dashboard.setSelectedBookmarkId}
+      />
 
-        <div style={customStyles.sectionLabel}>Interest Categories</div>
-        <div style={customStyles.categoryGrid}>
-          {categoryTiles.map((category) => (
-            <CategoryItem
-              key={category.id}
-              label={category.label}
-              count={category.count}
-              icon={category.icon}
-              gradient={category.gradient}
-              isActive={effectiveCategoryId === category.id}
-              onClick={() => setActiveCategoryId(category.id)}
-            />
-          ))}
-        </div>
-
-        <div style={customStyles.sectionLabel}>X Account</div>
-        <div style={customStyles.statusBox}>{accountStatusCopy}</div>
-        <div style={customStyles.actionRow}>
-          <button
-            style={{
-              ...customStyles.primaryButton,
-              opacity: canConnectX ? 1 : 0.6,
-              cursor: canConnectX ? 'pointer' : 'not-allowed',
-            }}
-            onClick={connectX}
-            disabled={!canConnectX}
-          >
-            {session?.authenticated && session.account ? `Connected @${session.account.username}` : 'Connect X'}
-          </button>
-          <button
-            style={{
-              ...customStyles.secondaryButton,
-              opacity: canSyncX ? 1 : 0.6,
-              cursor: canSyncX ? 'pointer' : 'not-allowed',
-            }}
-            onClick={() => {
-              void syncFromX()
-            }}
-            disabled={!canSyncX || isSyncing}
-          >
-            {isSyncing ? 'Syncing...' : 'Sync now'}
-          </button>
-          <button
-            style={{
-              ...customStyles.secondaryButton,
-              opacity: canSyncX ? 1 : 0.6,
-              cursor: canSyncX ? 'pointer' : 'not-allowed',
-            }}
-            onClick={() => {
-              void signOut()
-            }}
-            disabled={!canSyncX}
-          >
-            Sign out
-          </button>
-        </div>
-        <div style={customStyles.statusBox}>
-          {isPending ? 'Re-sorting bookmarks...' : statusMessage}
-        </div>
-
-        <div style={customStyles.sectionLabel}>Refine Profile</div>
-        <input
-          value={customInterest}
-          onChange={(event) => setCustomInterest(event.target.value)}
-          style={customStyles.compactInput}
-          placeholder="Add a custom interest"
-        />
-        <div style={customStyles.actionRow}>
-          <button style={customStyles.secondaryButton} onClick={handleAddCustomInterest}>
-            Add interest
-          </button>
-        </div>
-        {profileMessage ? <div style={customStyles.statusBox}>{profileMessage}</div> : null}
-        <div style={customStyles.tagList}>
-          {starterInterests.map((interest) => (
-            <FilterPill
-              key={interest.id}
-              label={interest.label}
-              active={activeInterests.some((item) => item.id === interest.id)}
-              onClick={() => {
-                startTransition(() => {
-                  toggleStarterInterest(interest)
-                })
-              }}
-            />
-          ))}
-        </div>
-
-        <div style={{ ...customStyles.sectionLabel, borderTop: '1px solid #000000', paddingTop: '20px' }}>
-          Filter by Type
-        </div>
-        <div style={customStyles.tagList}>
-          {contentTypeOptions.map((label) => (
-            <FilterPill
-              key={label}
-              label={label}
-              active={activeType === label}
-              onClick={() => setActiveType(label)}
-            />
-          ))}
-        </div>
-        <div style={customStyles.helperText}>
-          Interest matching is local and heuristic for now. It is designed so an AI classifier can replace the scoring layer later without changing the UI.
-        </div>
-      </div>
-
-      <div style={columnStyle}>
-        <div style={customStyles.viewHeader}>
-          <span style={customStyles.viewTitle}>Saved Bookmarks</span>
-          <span style={customStyles.viewTitle}>{visibleBookmarks.length} visible</span>
-        </div>
-
-        <div style={customStyles.searchBar}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search bookmarks..."
-            style={customStyles.searchInput}
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-          />
-        </div>
-
-        <div style={customStyles.infoBar}>
-          <span>{infoBarPrimary}</span>
-          <span>{infoBarSecondary}</span>
-        </div>
-
-        <div style={customStyles.bookmarkList}>
-          {visibleBookmarks.length === 0 ? (
-            <div style={customStyles.emptyState}>
-              {emptyStateMessage}
-            </div>
-          ) : (
-            visibleBookmarks.map((bookmark) => (
-              <BookmarkItem
-                key={bookmark.id}
-                bookmark={bookmark}
-                icon={<InterestIcon interestId={bookmark.matchedInterestId} />}
-                isSelected={selectedBookmark?.id === bookmark.id}
-                onClick={() => setSelectedBookmarkId(bookmark.id)}
-              />
-            ))
-          )}
-        </div>
-      </div>
-
-      <div style={columnLastStyle}>
-        <div style={customStyles.viewHeader}>
-          <span style={customStyles.viewTitle}>Insights</span>
-          <span style={customStyles.viewTitle}>{percent(analysis.summary.averageConfidence)} confidence</span>
-        </div>
-
-        <div style={customStyles.analysisSection}>
-          <div style={{ ...customStyles.sectionLabel, padding: '0 0 16px 0' }}>Bookmark Velocity</div>
-
-          <div style={customStyles.segmentControl}>
-            {segments.map((segment, index) => {
-              const isActive = activeSegment === segment
-              const isLast = index === segments.length - 1
-              let buttonStyle = customStyles.segmentBtn
-
-              if (isActive && isLast) buttonStyle = customStyles.segmentBtnLastActive
-              else if (isActive) buttonStyle = customStyles.segmentBtnActive
-              else if (isLast) buttonStyle = customStyles.segmentBtnLast
-
-              return (
-                <button key={segment} style={buttonStyle} onClick={() => setActiveSegment(segment)}>
-                  {segment}
-                </button>
-              )
-            })}
-          </div>
-
-          <div style={customStyles.chartContainer}>
-            <div style={customStyles.chartGrid}>
-              <div style={customStyles.chartGridLine} />
-              <div style={customStyles.chartGridLine} />
-              <div style={customStyles.chartGridLine} />
-            </div>
-            <svg style={customStyles.chartSvg} viewBox="0 0 300 200" preserveAspectRatio="none">
-              {analysis.stats.slice(0, 3).map((stat) => {
-                const series = chartData.seriesMap.get(stat.interestId) ?? []
-                return (
-                  <polyline
-                    key={stat.interestId}
-                    points={polylinePoints(series, 300, 180, chartData.maxValue)}
-                    fill="none"
-                    stroke={stat.tint}
-                    strokeWidth="2"
-                    strokeLinejoin="miter"
-                  />
-                )
-              })}
-              <line
-                x1="210"
-                y1="0"
-                x2="210"
-                y2="200"
-                stroke="#000000"
-                strokeWidth="1"
-                strokeDasharray="2 2"
-              />
-            </svg>
-          </div>
-
-          <p style={customStyles.insightText}>
-            {buildInsightCopy(
-              analysis.bookmarks,
-              analysis.summary.topInterestLabel,
-              analysis.summary.hottestActionLane,
-            )}
-          </p>
-        </div>
-
-        <div style={customStyles.analysisSection}>
-          <div style={{ ...customStyles.sectionLabel, padding: '0 0 16px 0' }}>Selected Bookmark</div>
-          {selectedBookmark ? (
-            <div style={customStyles.detailCard}>
-              <div>
-                <div style={customStyles.detailLabel}>Suggested category</div>
-                <select
-                  style={customStyles.detailSelect}
-                  value={overrides[selectedBookmark.id] ?? '__auto__'}
-                  onChange={(event) => {
-                    const nextValue = event.target.value
-                    if (nextValue === '__auto__') {
-                      startTransition(() => {
-                        clearOverride(selectedBookmark.id)
-                      })
-                      return
-                    }
-
-                    startTransition(() => {
-                      setOverride(selectedBookmark.id, nextValue)
-                    })
-                  }}
-                >
-                  <option value="__auto__">
-                    Auto suggest ({selectedBookmark.matchedInterestLabel})
-                  </option>
-                  {[...activeInterests, analysis.uncategorizedInterest].map((interest) => (
-                    <option key={interest.id} value={interest.id}>
-                      {interest.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={customStyles.detailMeta}>
-                <span style={customStyles.actionStat}>{selectedBookmark.contentType}</span>
-                <span style={customStyles.actionStat}>{selectedBookmark.actionLane}</span>
-                <span style={customStyles.actionStat}>
-                  {selectedBookmark.isManual ? 'Manual override' : percent(selectedBookmark.confidence)}
-                </span>
-              </div>
-
-              <div>
-                <div style={customStyles.detailLabel}>Why it landed here</div>
-                <div style={customStyles.detailBody}>{selectedBookmark.reason}</div>
-              </div>
-
-              <div>
-                <div style={customStyles.detailLabel}>Bookmark text</div>
-                <div style={customStyles.detailBody}>{selectedBookmark.text}</div>
-              </div>
-
-              <div>
-                <div style={customStyles.detailLabel}>Signals</div>
-                <div style={{ ...customStyles.tagList, padding: '8px 0 0' }}>
-                  {selectedBookmark.signals.length > 0 ? (
-                    selectedBookmark.signals.map((signal) => (
-                      <span key={signal} style={customStyles.tagPill}>
-                        {signal}
-                      </span>
-                    ))
-                  ) : (
-                    <span style={customStyles.insightText}>No dominant keyword signals yet.</span>
-                  )}
-                </div>
-              </div>
-
-              {selectedBookmark.url ? (
-                <a
-                  href={selectedBookmark.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ ...customStyles.secondaryButton, textDecoration: 'none', textAlign: 'center' }}
-                >
-                  Open source post
-                </a>
-              ) : null}
-            </div>
-          ) : (
-            <div style={customStyles.emptyState}>
-              Select a bookmark to inspect the category recommendation and edit it manually.
-            </div>
-          )}
-        </div>
-
-        <div style={{ ...customStyles.analysisSection, borderBottom: 'none' }}>
-          <div style={{ ...customStyles.sectionLabel, padding: '0 0 16px 0' }}>Top Sources</div>
-          <div style={customStyles.sourceList}>
-            {sourceSummary.map((source) => (
-              <div key={source.label} style={customStyles.sourceRow}>
-                <span style={customStyles.sourceHandle}>{source.label}</span>
-                <span style={customStyles.sourceCount}>{source.count} saves</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <InsightsPanel
+        columnStyle={columnLastStyle}
+        analysis={dashboard.analysis}
+        selectedBookmark={dashboard.selectedBookmark}
+        activeInterests={activeInterests}
+        overrides={overrides}
+        activeSegment={dashboard.activeSegment}
+        segments={dashboard.segments}
+        chartData={dashboard.chartData}
+        sourceSummary={dashboard.sourceSummary}
+        onSegmentChange={dashboard.setActiveSegment}
+        onSetOverride={handleSetOverride}
+        onClearOverride={handleClearOverride}
+      />
     </div>
   )
 }

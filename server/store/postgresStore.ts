@@ -43,6 +43,11 @@ type BookmarkRow = {
   synced_at: Date
 }
 
+type RateLimitRow = {
+  count: number
+  reset_at: Date
+}
+
 function accessTokenExpiresAt(value: string | null) {
   return value ? new Date(value) : null
 }
@@ -349,6 +354,49 @@ export class PostgresStore implements AppStore {
       throw error
     } finally {
       client.release()
+    }
+  }
+
+  async checkRateLimit(key: string, limit: number, windowMs: number) {
+    const result = await this.pool.query<RateLimitRow>(
+      `
+        insert into rate_limit_buckets (bucket_key, count, reset_at)
+        values ($1, 1, now() + ($2 * interval '1 millisecond'))
+        on conflict (bucket_key) do update
+        set
+          count = case
+            when rate_limit_buckets.reset_at <= now() then 1
+            else rate_limit_buckets.count + 1
+          end,
+          reset_at = case
+            when rate_limit_buckets.reset_at <= now() then now() + ($2 * interval '1 millisecond')
+            else rate_limit_buckets.reset_at
+          end
+        returning count, reset_at
+      `,
+      [key, windowMs],
+    )
+
+    const row = result.rows[0]
+    const retryAfterSeconds = Math.max(1, Math.ceil((row.reset_at.getTime() - Date.now()) / 1000))
+
+    await this.pool.query(
+      `
+        delete from rate_limit_buckets
+        where reset_at <= now()
+      `,
+    )
+
+    if (row.count > limit) {
+      return {
+        allowed: false,
+        retryAfterSeconds,
+      }
+    }
+
+    return {
+      allowed: true,
+      retryAfterSeconds: 0,
     }
   }
 

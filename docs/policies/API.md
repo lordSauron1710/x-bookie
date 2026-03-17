@@ -11,6 +11,7 @@ That surface is security-critical.
 - `GET /api/session`
 - `GET /api/bookmarks`
 - `POST /api/bookmarks/sync`
+- `POST /api/bookmarks/classify`
 - `GET /api/auth/x/start`
 - `GET /api/auth/x/callback`
 - `POST /api/auth/logout`
@@ -23,6 +24,7 @@ That surface is security-critical.
 - Authenticate before business logic when the endpoint is not fully public.
 - Authorize separately from authentication when capabilities diverge later.
 - Rate limit public or state-changing routes.
+- Enforce same-origin `Origin` checks on cookie-authenticated write routes when the header is present.
 - Return safe error messages.
   - Do not leak stack traces, provider internals, or secret-bearing details.
 - Restrict methods explicitly.

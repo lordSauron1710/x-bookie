@@ -51,6 +51,31 @@ describe('analyzeBookmarks', () => {
     expect(analysis.bookmarks[0].isManual).toBe(true)
     expect(analysis.bookmarks[0].confidence).toBeGreaterThan(0.9)
   })
+
+  test('prefers model suggestions when provided', () => {
+    const bookmark = buildBookmark({ text: 'Tracking beta data with launch notes' }, 'bookmark-model')
+    const analysis = analyzeBookmarks(
+      [bookmark],
+      focusInterests,
+      {},
+      {
+        [bookmark.id]: {
+          bookmarkId: bookmark.id,
+          interestId: 'beta',
+          confidence: 0.88,
+          signals: ['Market data', 'Multiples'],
+          contentType: 'Market Note',
+          actionLane: 'Track',
+          reason: 'The bookmark is clearly about growth and market tracking.',
+        },
+      },
+    )
+
+    expect(analysis.bookmarks[0].matchedInterestId).toBe('beta')
+    expect(analysis.bookmarks[0].contentType).toBe('Market Note')
+    expect(analysis.bookmarks[0].actionLane).toBe('Track')
+    expect(analysis.bookmarks[0].reason).toContain('clearly about growth')
+  })
 })
 
 describe('createCustomInterest', () => {

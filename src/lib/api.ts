@@ -1,6 +1,8 @@
 import type {
   ApiError,
   BookmarksResponse,
+  ClassifyBookmarksRequest,
+  ClassifyBookmarksResponse,
   SessionResponse,
   SyncBookmarksResponse,
 } from '../../shared/contracts.ts'
@@ -48,6 +50,16 @@ export async function fetchBookmarks() {
 export async function syncBookmarks() {
   return requestJson<SyncBookmarksResponse>('/api/bookmarks/sync', {
     method: 'POST',
+  })
+}
+
+export async function classifyBookmarks(payload: ClassifyBookmarksRequest) {
+  return requestJson<ClassifyBookmarksResponse>('/api/bookmarks/classify', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload),
   })
 }
 

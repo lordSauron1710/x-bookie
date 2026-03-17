@@ -12,6 +12,8 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === 'true'),
   TOKEN_ENCRYPTION_KEY: z.string().trim().min(1).optional(),
+  OPENAI_API_KEY: z.string().trim().min(1).optional(),
+  OPENAI_MODEL: z.string().trim().min(1).default('gpt-5-mini'),
   X_CLIENT_ID: z.string().trim().min(1).optional(),
   X_CLIENT_SECRET: z.string().trim().min(1).optional(),
   X_REDIRECT_URI: z.string().url().optional(),

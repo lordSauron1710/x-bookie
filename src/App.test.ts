@@ -24,6 +24,7 @@ function buildSession(overrides: Partial<SessionResponse> = {}): SessionResponse
   return {
     authenticated: true,
     xAuthConfigured: true,
+    classificationMode: 'heuristic',
     account: {
       xUserId: 'u1',
       username: 'alice',

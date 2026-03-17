@@ -117,6 +117,7 @@ describe('server routes', () => {
     expect(response.status).toBe(200)
     expect(response.body.authenticated).toBe(false)
     expect(response.body.xAuthConfigured).toBe(true)
+    expect(response.body.classificationMode).toBe('heuristic')
     await store.close()
   })
 
@@ -130,6 +131,7 @@ describe('server routes', () => {
     expect(response.body).toEqual({
       authenticated: true,
       xAuthConfigured: true,
+      classificationMode: 'heuristic',
       account: baseAccount,
       bookmarkCount: 1,
       lastSyncedAt: feed.lastSyncedAt,
@@ -335,6 +337,22 @@ describe('server routes', () => {
     await store.close()
   })
 
+  test('POST /api/bookmarks/sync rejects foreign origins', async () => {
+    const { app, store, sessionCookie } = await createAuthenticatedContext()
+
+    const response = await request(app)
+      .post('/api/bookmarks/sync')
+      .set('Cookie', sessionCookie)
+      .set('Origin', 'https://evil.example')
+
+    expect(response.status).toBe(403)
+    expect(response.body.error).toEqual({
+      code: 'forbidden_origin',
+      message: 'Requests must originate from the app origin.',
+    })
+    await store.close()
+  })
+
   test('POST /api/bookmarks/sync returns sync payloads for authenticated sessions', async () => {
     const { store, sessionCookie } = await createAuthenticatedContext()
     const syncBookmarksForSession = vi.fn().mockResolvedValue({
@@ -400,6 +418,89 @@ describe('server routes', () => {
       code: 'x_sync_failed',
       message: 'Bookmark sync failed. Check your X app configuration and try again.',
     })
+    await store.close()
+  })
+
+  test('POST /api/bookmarks/classify requires authentication', async () => {
+    const store = createMemoryStore()
+    const app = createApp(store, {}, buildConfig({ OPENAI_API_KEY: 'sk-test', OPENAI_MODEL: 'gpt-5-mini' }))
+
+    await request(app)
+      .post('/api/bookmarks/classify')
+      .send({ bookmarks: [syncedBookmark], interests: [] })
+      .expect(401)
+      .expect((response) => {
+        expect(response.body.error?.code).toBe('unauthorized')
+      })
+    await store.close()
+  })
+
+  test('POST /api/bookmarks/classify returns 503 when the model classifier is not configured', async () => {
+    const { app, store, sessionCookie } = await createAuthenticatedContext()
+
+    const response = await request(app)
+      .post('/api/bookmarks/classify')
+      .set('Cookie', sessionCookie)
+      .send({
+        bookmarks: [syncedBookmark],
+        interests: [{ id: 'alpha', label: 'Alpha', description: 'Alpha topics', keywords: ['alpha'] }],
+      })
+
+    expect(response.status).toBe(503)
+    expect(response.body.error).toEqual({
+      code: 'classifier_unavailable',
+      message: 'Model-backed classification is not configured for this environment.',
+    })
+    await store.close()
+  })
+
+  test('POST /api/bookmarks/classify returns model suggestions when configured', async () => {
+    const { store, sessionCookie } = await createAuthenticatedContext()
+    const classifyBookmarks = vi.fn().mockResolvedValue([
+      {
+        bookmarkId: syncedBookmark.id,
+        interestId: 'alpha',
+        confidence: 0.84,
+        signals: ['Launch planning'],
+        contentType: 'Launch',
+        actionLane: 'Build',
+        reason: 'The bookmark is about launch execution.',
+      },
+    ])
+    const app = createApp(
+      store,
+      {
+        checkRateLimit: () => ({ allowed: true, retryAfterSeconds: 0 }),
+        classifyBookmarks,
+      },
+      buildConfig({ OPENAI_API_KEY: 'sk-test', OPENAI_MODEL: 'gpt-5-mini' }),
+    )
+
+    const response = await request(app)
+      .post('/api/bookmarks/classify')
+      .set('Cookie', sessionCookie)
+      .send({
+        bookmarks: [syncedBookmark],
+        interests: [{ id: 'alpha', label: 'Alpha', description: 'Alpha topics', keywords: ['alpha'] }],
+      })
+
+    expect(response.status).toBe(200)
+    expect(response.body).toEqual({
+      items: [
+        {
+          bookmarkId: syncedBookmark.id,
+          interestId: 'alpha',
+          confidence: 0.84,
+          signals: ['Launch planning'],
+          contentType: 'Launch',
+          actionLane: 'Build',
+          reason: 'The bookmark is about launch execution.',
+        },
+      ],
+      mode: 'model',
+      model: 'gpt-5-mini',
+    })
+    expect(classifyBookmarks).toHaveBeenCalledTimes(1)
     await store.close()
   })
 })

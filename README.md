@@ -13,6 +13,7 @@ X-only bookmark intelligence app for connecting an X account, syncing bookmarks,
 - Connects an X account with OAuth 2.0 PKCE.
 - Syncs bookmarks from X into the app backend.
 - Scores bookmarks against user-defined interests.
+- Optionally upgrades those scores with a server-side model-backed classifier while preserving the same review UI contract.
 - Suggests categories, confidence, action lanes, and short explanations for each bookmark.
 - Stores per-account interests and manual overrides in the browser.
 
@@ -28,10 +29,12 @@ Express server
   -> X OAuth start/callback routes
   -> Signed cookie session endpoints
   -> Bookmark sync endpoint
+  -> Model-backed bookmark classification endpoint
   -> Pluggable store (memory by default, Postgres when configured)
 
-Planned next step
-  -> Frontend decomposition and model-backed bookmark classification
+Client app
+  -> Three-panel dashboard shell
+  -> Orchestration hooks for bookmark source, interests, dashboard state, and model suggestions
 ```
 
 ## Current runtime posture
@@ -41,9 +44,11 @@ Planned next step
 | Auth | X-only OAuth 2.0 PKCE via backend |
 | Sessions | Signed `HttpOnly` cookie |
 | Bookmark sync | Live X fetch through backend |
+| Classification | Heuristic by default, model-backed when `OPENAI_API_KEY` is configured |
 | Bookmark persistence | In-memory by default, Postgres when `DATABASE_URL` is configured |
 | Interest profile | Browser `localStorage`, scoped by X user id |
 | Database | Optional Postgres runtime with schema auto-init from `db/schema.sql` |
+| Rate limiting | In-memory by default, shared Postgres buckets when `DATABASE_URL` is configured |
 
 ## Repository layout
 
@@ -107,6 +112,14 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/x_bookie
 TOKEN_ENCRYPTION_KEY=<base64-encoded-32-byte-key>
 ```
 
+If you want model-backed classification instead of heuristics-only sorting, also set:
+
+```text
+OPENAI_API_KEY=<server-only key>
+# Optional override:
+OPENAI_MODEL=gpt-5-mini
+```
+
 You can generate the encryption key with:
 
 ```bash
@@ -147,10 +160,14 @@ npm run start
 ```bash
 npm test
 npm run test:coverage
+npm run test:e2e
 ```
 
 - `npm test` runs the full Vitest suite across frontend and backend modules.
 - `npm run test:coverage` generates text and HTML coverage reports.
+- `npm run test:e2e` runs the browser flow against a same-origin local stack plus a mock X provider.
+- `npm run test:postgres` runs the Postgres store integration suite when `TEST_DATABASE_URL` is set.
+- `e2e/postgres-persistence.spec.ts` automatically activates when `E2E_DATABASE_URL` is set.
 - GitHub Actions runs lint, build, and coverage-backed tests on pushes to `main` and on pull requests.
 
 ## Environment variables
@@ -162,6 +179,8 @@ Important ones:
 - `SESSION_COOKIE_SECRET`
 - `DATABASE_URL` for durable server storage
 - `TOKEN_ENCRYPTION_KEY` for encrypting X tokens at rest when Postgres is enabled
+- `OPENAI_API_KEY` for server-side model-backed classification
+- `OPENAI_MODEL` to override the default classifier model
 - `X_CLIENT_ID`
 - `X_CLIENT_SECRET` when your X app type requires it
 - `APP_ORIGIN`
@@ -174,6 +193,7 @@ Important ones:
 - `GET /api/session`
 - `GET /api/bookmarks`
 - `POST /api/bookmarks/sync`
+- `POST /api/bookmarks/classify`
 - `GET /api/auth/x/start`
 - `GET /api/auth/x/callback`
 - `POST /api/auth/logout`
@@ -181,16 +201,19 @@ Important ones:
 ## Security baseline
 
 - X tokens stay server-side.
+- OpenAI classification calls stay server-side.
 - If Postgres is enabled, X tokens are encrypted before storage.
 - Browser code should never receive X provider secrets.
 - Sessions use signed `HttpOnly` cookies.
+- State-changing routes reject mismatched `Origin` headers.
+- Production responses add CSP, HSTS, and same-origin browser isolation headers.
 - Durable persistence is opt-in through `DATABASE_URL`; otherwise the backend falls back to memory.
 
 ## Project status
 
-- Current state: X-only full-stack MVP with live auth routes, bookmark sync routes, a shared analysis UI, optional Postgres-backed persistence, and per-account local interest profiles.
-- Current limitation: bookmark analysis is still heuristic, and frontend UI logic is still concentrated in large files even though the automated test baseline now covers the main hooks, app shell flows, and backend auth/sync primitives.
-- Next milestone: decompose the UI and introduce a model-backed classifier behind the existing analysis contract.
+- Current state: X-only full-stack app with live auth routes, bookmark sync routes, optional model-backed classification, a decomposed three-panel UI, optional Postgres-backed persistence, shared Postgres rate limiting, and per-account local interest profiles.
+- Current limitation: the model-backed path is optional and requires server-side OpenAI configuration; Postgres validation and browser E2E are wired in but still depend on test environment variables for full coverage.
+- Next milestone: harden the production rollout with a real Postgres-backed release environment, operational monitoring, and live X credentials.
 
 ## Documentation map
 

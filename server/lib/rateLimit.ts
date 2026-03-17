@@ -3,9 +3,17 @@ type Bucket = {
   resetAt: number
 }
 
-const buckets = new Map<string, Bucket>()
+export type RateLimitResult = {
+  allowed: boolean
+  retryAfterSeconds: number
+}
 
-export function checkRateLimit(key: string, limit: number, windowMs: number) {
+export function checkRateLimitInBuckets(
+  buckets: Map<string, Bucket>,
+  key: string,
+  limit: number,
+  windowMs: number,
+): RateLimitResult {
   const now = Date.now()
   const bucket = buckets.get(key)
 
@@ -33,4 +41,8 @@ export function checkRateLimit(key: string, limit: number, windowMs: number) {
     allowed: true,
     retryAfterSeconds: 0,
   }
+}
+
+export function createRateLimitBuckets() {
+  return new Map<string, Bucket>()
 }

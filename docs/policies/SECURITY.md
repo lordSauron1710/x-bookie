@@ -1,6 +1,6 @@
 # Security Policy
 
-x-bookie is now a full-stack X-only application. The main risks are OAuth misconfiguration, token exposure, insecure session handling, unsafe future persistence, client-side injection, and over-trusting browser state.
+x-bookie is now a full-stack X-only application. The main risks are OAuth misconfiguration, token exposure, insecure session handling, unsafe future persistence, client-side injection, over-trusting browser state, and leaking model-provider credentials.
 
 Treat security requirements as non-optional.
 
@@ -14,10 +14,12 @@ Treat security requirements as non-optional.
 ## Current Security Posture
 
 - Bookmark analysis still runs in the browser.
+- Model-backed classification is optional and runs server-side when OpenAI config is present.
 - X auth and bookmark sync happen through the Express backend.
 - Sessions use signed `HttpOnly` cookies.
 - X provider tokens stay server-side and are encrypted at rest when Postgres storage is enabled.
 - Durable persistence is optional; without database configuration the backend still falls back to memory.
+- Shared rate limiting also moves into Postgres when database configuration is present.
 - Browser `localStorage` is used only for interest profiles and overrides, not for auth or provider tokens.
 
 ## Core Rules
@@ -27,11 +29,14 @@ Treat security requirements as non-optional.
 - Treat all browser-delivered code as public.
   - Any value exposed to client code must be safe to expose.
 - Do not store X provider tokens in `localStorage`, `sessionStorage`, or query parameters.
+- Do not expose model-provider keys to browser bundles or browser-visible env vars.
 - Do not add unsafe browser sinks.
   - No `dangerouslySetInnerHTML` with untrusted content.
   - No `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `eval`, `new Function`, or string-based timers for untrusted input.
 - Keep auth and sync logic server-side.
+- Keep model-provider calls server-side.
 - Rate limit auth start and bookmark sync routes.
+- Require same-origin `Origin` checks on state-changing cookie-authenticated routes.
 - Require `TOKEN_ENCRYPTION_KEY` whenever provider tokens are stored in Postgres.
 - Prefer typed data and React rendering over manual DOM mutation.
 - Keep dependencies minimal and reviewable.
@@ -53,6 +58,7 @@ Treat security requirements as non-optional.
   - restrictive `Permissions-Policy` for unused browser features
 - Do not load third-party scripts unless the product requires them and the data exposure is understood.
 - Do not expose debug behavior or stack traces in production-facing responses.
+- In production, serve CSP and HSTS headers in addition to the baseline browser headers.
 
 ## Required Checks Before Merge
 

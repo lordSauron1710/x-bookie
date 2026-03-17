@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import type { BookmarkRecord } from '../../shared/contracts.js'
+import { checkRateLimitInBuckets, createRateLimitBuckets } from '../lib/rateLimit.js'
 import type { AppStore, AuthTransaction, StoredBookmarkFeed, StoredSession, StoredTokens } from './types.js'
 
 const AUTH_TTL_MS = 10 * 60 * 1000
@@ -10,6 +11,7 @@ export class MemoryStore implements AppStore {
   private readonly authTransactions = new Map<string, AuthTransaction>()
   private readonly sessions = new Map<string, StoredSession>()
   private readonly bookmarksByUser = new Map<string, StoredBookmarkFeed>()
+  private readonly rateLimitBuckets = createRateLimitBuckets()
 
   async createAuthTransaction(verifier: string) {
     const state = randomUUID()
@@ -83,6 +85,10 @@ export class MemoryStore implements AppStore {
     return feed
   }
 
+  async checkRateLimit(key: string, limit: number, windowMs: number) {
+    return checkRateLimitInBuckets(this.rateLimitBuckets, key, limit, windowMs)
+  }
+
   private pruneAuthTransactions() {
     const now = Date.now()
 
@@ -97,6 +103,7 @@ export class MemoryStore implements AppStore {
     this.authTransactions.clear()
     this.sessions.clear()
     this.bookmarksByUser.clear()
+    this.rateLimitBuckets.clear()
   }
 }
 

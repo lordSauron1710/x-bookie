@@ -12,6 +12,9 @@ coverage
 dist
 dist-ssr
 *.local
+playwright-report
+test-results
+output/playwright
 .env
 .env.*
 !.env.example

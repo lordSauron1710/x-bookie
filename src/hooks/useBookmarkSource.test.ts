@@ -24,6 +24,7 @@ function buildSession(overrides: Partial<SessionResponse> = {}): SessionResponse
   return {
     authenticated: false,
     xAuthConfigured: true,
+    classificationMode: 'heuristic',
     account: null,
     bookmarkCount: 0,
     lastSyncedAt: null,

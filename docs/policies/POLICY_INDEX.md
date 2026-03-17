@@ -13,9 +13,11 @@ This file is the entrypoint for the repository policy set.
 
 - Vite + React frontend
 - Express backend for X OAuth, sessions, and bookmark sync
+- Optional server-side OpenAI-backed bookmark classification
 - X-only authentication model
 - Signed server-side cookie sessions
 - Memory-backed server store by default, with optional Postgres-backed persistence
+- Shared Postgres-backed rate limiting when durable storage is enabled
 - Browser `localStorage` only for per-account interests and overrides
 - Postgres schema and runtime store available when `DATABASE_URL` is configured
 - Environment variables are required for X auth and production deployment

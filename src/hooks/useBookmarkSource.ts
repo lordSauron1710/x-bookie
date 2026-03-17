@@ -108,6 +108,7 @@ export function useBookmarkSource() {
       setSession({
         authenticated: false,
         xAuthConfigured: session?.xAuthConfigured ?? true,
+        classificationMode: session?.classificationMode ?? 'heuristic',
         account: null,
         bookmarkCount: 0,
         lastSyncedAt: null,

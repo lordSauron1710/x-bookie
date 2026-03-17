@@ -30,6 +30,7 @@ Prioritize:
 | Styling | CSS + component-level UI structure | Match the established UI direction unless a task changes it |
 | State | React state + localStorage + server session | Local storage is for per-account interests/overrides only |
 | Data | Live X bookmarks via OAuth | Backend cache is in-memory today; durable DB is the next step |
+| Classification | Heuristics by default, optional server-side OpenAI model | Preserve the existing analysis UI contract |
 
 If the stack changes materially, update this file and `README.md`.
 
@@ -87,10 +88,14 @@ Required follow-through:
 | [src/lib/bookmarks.ts](./src/lib/bookmarks.ts) | Scoring and categorization logic |
 | [src/hooks/useBookmarkSource.ts](./src/hooks/useBookmarkSource.ts) | Frontend X session and bookmark source logic |
 | [src/hooks/useInterestProfile.ts](./src/hooks/useInterestProfile.ts) | Per-account interest and override persistence |
+| [src/hooks/useBookmarkClassification.ts](./src/hooks/useBookmarkClassification.ts) | Client hook for optional model-backed bookmark suggestions |
+| [src/hooks/useBookmarkDashboard.ts](./src/hooks/useBookmarkDashboard.ts) | Dashboard orchestration hook for filters, selection, and derived analysis state |
 | [server/index.ts](./server/index.ts) | Express server entrypoint and X-facing API routes |
+| [server/lib/bookmarkClassifier.ts](./server/lib/bookmarkClassifier.ts) | Server-side model-backed bookmark classification |
 | [server/lib/xOAuth.ts](./server/lib/xOAuth.ts) | X OAuth 2.0 PKCE exchange logic |
 | [server/lib/xClient.ts](./server/lib/xClient.ts) | X API client and bookmark fetch logic |
 | [server/store/memoryStore.ts](./server/store/memoryStore.ts) | Current in-memory session/bookmark store |
+| [playwright.config.ts](./playwright.config.ts) | Browser E2E harness for login, sync, logout, and persistence flows |
 | [shared/contracts.ts](./shared/contracts.ts) | Shared client/server API contracts |
 | [db/schema.sql](./db/schema.sql) | Planned durable Postgres schema for the next phase |
 | [POLICY_INDEX.md](./docs/policies/POLICY_INDEX.md) | Entry point for the policy set |

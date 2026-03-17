@@ -1,4 +1,4 @@
-import type { BookmarkRecord } from '../../shared/contracts.ts'
+import type { BookmarkModelSuggestion, BookmarkRecord } from '../../shared/contracts.ts'
 
 export type InterestDefinition = {
   id: string
@@ -720,6 +720,7 @@ export function analyzeBookmarks(
   bookmarks: BookmarkRecord[],
   interests: InterestDefinition[],
   overrides: Record<string, string> = {},
+  modelSuggestions: Record<string, BookmarkModelSuggestion> = {},
 ) {
   const activeInterests = interests.length > 0 ? interests : [uncategorizedInterest]
   const interestLookup = new Map(
@@ -737,16 +738,35 @@ export function analyzeBookmarks(
     const winner = scored[0]
     const runnerUpScore = scored[1]?.score ?? 0
     const shouldCategorize = winner && winner.score > 0
-    const defaultInterest = shouldCategorize ? winner.interest : uncategorizedInterest
-    const baseConfidence = shouldCategorize
+    const heuristicInterest = shouldCategorize ? winner.interest : uncategorizedInterest
+    const heuristicConfidence = shouldCategorize
       ? clamp(0.48 + winner.score / 10 + (winner.score - runnerUpScore) / 12, 0.42, 0.95)
       : 0.34
+    const modelSuggestion = modelSuggestions[bookmark.id]
+    const modelInterest =
+      modelSuggestion?.interestId ? interestLookup.get(modelSuggestion.interestId) ?? uncategorizedInterest : uncategorizedInterest
+    const hasModelSuggestion = Boolean(modelSuggestion)
+    const defaultInterest = hasModelSuggestion ? modelInterest : heuristicInterest
+    const baseConfidence = hasModelSuggestion
+      ? clamp(modelSuggestion?.confidence ?? heuristicConfidence, 0.28, 0.98)
+      : heuristicConfidence
     const overrideId = overrides[bookmark.id]
     const finalInterest = overrideId ? interestLookup.get(overrideId) ?? defaultInterest : defaultInterest
-    const contentType = detectContentType(bookmark)
-    const actionLane = detectActionLane(bookmark, finalInterest)
+    const contentType = modelSuggestion?.contentType.trim() || detectContentType(bookmark)
+    const actionLane = modelSuggestion?.actionLane.trim() || detectActionLane(bookmark, finalInterest)
     const signals =
-      finalInterest.id === defaultInterest.id || !winner ? winner?.signals ?? [] : tokenizeLabel(finalInterest.label)
+      overrideId
+        ? tokenizeLabel(finalInterest.label)
+        : hasModelSuggestion
+          ? modelSuggestion?.signals.filter(Boolean).slice(0, 4) ?? []
+          : finalInterest.id === defaultInterest.id || !winner
+            ? winner?.signals ?? []
+            : tokenizeLabel(finalInterest.label)
+    const reason = overrideId
+      ? `Manually moved into ${finalInterest.label}.`
+      : hasModelSuggestion
+        ? modelSuggestion?.reason.trim() || describeReason(signals, finalInterest.label, contentType)
+        : describeReason(signals, finalInterest.label, contentType)
 
     return {
       ...bookmark,
@@ -756,7 +776,7 @@ export function analyzeBookmarks(
       signals,
       contentType,
       actionLane,
-      reason: describeReason(signals, finalInterest.label, contentType),
+      reason,
       isManual: Boolean(overrideId),
     }
   })

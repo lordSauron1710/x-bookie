@@ -11,12 +11,14 @@ Authentication is handled server-side through OAuth 2.0 PKCE and a signed `HttpO
 - No roles or permission model
 - No client-side authorization boundary
 - Session storage is memory-backed by default and can move to Postgres when configured
+- Cookie-authenticated write routes require same-origin `Origin` headers when present
 
 ## Current Rules
 
 - All authentication checks must be enforced server-side.
 - Client state may control UI, but it must not be treated as authorization.
 - Use signed `HttpOnly`, `Secure` cookies in production.
+- Keep cookie-authenticated POST routes same-origin and reject mismatched `Origin` headers.
 - Never store long-lived auth tokens or provider tokens in browser storage.
 - X provider tokens must remain server-side.
 - If provider tokens are stored durably, encrypt them at rest.

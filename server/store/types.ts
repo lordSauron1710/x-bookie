@@ -1,4 +1,5 @@
 import type { BookmarkRecord, XAccountSummary } from '../../shared/contracts.js'
+import type { RateLimitResult } from '../lib/rateLimit.js'
 
 export type StoredTokens = {
   accessToken: string
@@ -35,5 +36,6 @@ export interface AppStore {
   deleteSession(id: string | undefined): Promise<void>
   getBookmarks(xUserId: string): Promise<StoredBookmarkFeed>
   replaceBookmarks(xUserId: string, items: BookmarkRecord[]): Promise<StoredBookmarkFeed>
+  checkRateLimit(key: string, limit: number, windowMs: number): Promise<RateLimitResult>
   close(): Promise<void>
 }

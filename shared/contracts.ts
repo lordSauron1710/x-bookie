@@ -7,6 +7,36 @@ export type BookmarkRecord = {
   createdAt: string | null
 }
 
+export type BookmarkClassifierInterest = {
+  id: string
+  label: string
+  description: string
+  keywords: string[]
+}
+
+export type BookmarkClassificationMode = 'heuristic' | 'model'
+
+export type BookmarkModelSuggestion = {
+  bookmarkId: string
+  interestId: string | null
+  confidence: number
+  signals: string[]
+  contentType: string
+  actionLane: string
+  reason: string
+}
+
+export type ClassifyBookmarksRequest = {
+  bookmarks: BookmarkRecord[]
+  interests: BookmarkClassifierInterest[]
+}
+
+export type ClassifyBookmarksResponse = {
+  items: BookmarkModelSuggestion[]
+  mode: BookmarkClassificationMode
+  model: string | null
+}
+
 export type XAccountSummary = {
   xUserId: string
   username: string
@@ -17,6 +47,7 @@ export type XAccountSummary = {
 export type SessionResponse = {
   authenticated: boolean
   xAuthConfigured: boolean
+  classificationMode: BookmarkClassificationMode
   account: XAccountSummary | null
   bookmarkCount: number
   lastSyncedAt: string | null

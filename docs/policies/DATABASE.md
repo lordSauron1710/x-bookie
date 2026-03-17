@@ -9,6 +9,7 @@ Without that configuration, the backend falls back to the in-memory store and se
 - Postgres is optional in the runtime request path
 - The schema is initialized from `db/schema.sql` at startup when Postgres is enabled
 - Durable data includes users, sessions, encrypted X connections, synced bookmarks, and OAuth transactions
+- Postgres-backed deployments also use shared rate-limit buckets instead of per-process memory
 - No browser code can reach the database directly
 
 ## Rules If Durable Persistence Is Added
