@@ -1,6 +1,6 @@
 # Deployment Policy
 
-SignalShelf must remain easy to deploy as a frontend application while leaving room for secure future backend additions.
+x-bookie must remain easy to deploy as a frontend application while leaving room for secure future backend additions.
 
 ## Current Deployment Shape
 

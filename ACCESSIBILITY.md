@@ -1,6 +1,6 @@
 # Accessibility Policy
 
-SignalShelf should meet WCAG 2.1 AA expectations for the bookmark review interface.
+x-bookie should meet WCAG 2.1 AA expectations for the bookmark review interface.
 
 The UI can be visually opinionated, but it still has to be operable, understandable, and resilient.
 

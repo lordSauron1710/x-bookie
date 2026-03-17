@@ -1,6 +1,6 @@
 # Environment Variables Policy
 
-SignalShelf does not currently require any environment variables for local development or deployment.
+x-bookie does not currently require any environment variables for local development or deployment.
 
 That is the current baseline. Do not add environment variables casually.
 

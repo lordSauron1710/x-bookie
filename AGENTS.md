@@ -1,4 +1,4 @@
-# Agent Instructions - SignalShelf
+# Agent Instructions - x-bookie
 
 Primary instruction file for AI agents working in this repository.
 

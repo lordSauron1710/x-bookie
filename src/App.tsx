@@ -19,9 +19,9 @@ import {
 } from './lib/bookmarks'
 
 const storageKeys = {
-  bookmarks: 'signal-shelf/bookmarks/v1',
-  interests: 'signal-shelf/interests/v1',
-  overrides: 'signal-shelf/overrides/v1',
+  bookmarks: ['x-bookie/bookmarks/v1', 'signal-shelf/bookmarks/v1'],
+  interests: ['x-bookie/interests/v1', 'signal-shelf/interests/v1'],
+  overrides: ['x-bookie/overrides/v1', 'signal-shelf/overrides/v1'],
 }
 
 const customStyles: Record<string, CSSProperties> = {
@@ -555,15 +555,21 @@ function OtherIcon() {
   )
 }
 
-function readStoredJson<T>(key: string, fallback: T) {
-  const rawValue = window.localStorage.getItem(key)
-  if (!rawValue) return fallback
+function readStoredJson<T>(keys: string | string[], fallback: T) {
+  const orderedKeys = Array.isArray(keys) ? keys : [keys]
 
-  try {
-    return JSON.parse(rawValue) as T
-  } catch {
-    return fallback
+  for (const key of orderedKeys) {
+    const rawValue = window.localStorage.getItem(key)
+    if (!rawValue) continue
+
+    try {
+      return JSON.parse(rawValue) as T
+    } catch {
+      continue
+    }
   }
+
+  return fallback
 }
 
 function hashSeed(value: string) {
@@ -902,15 +908,15 @@ function App() {
   }, [])
 
   useEffect(() => {
-    window.localStorage.setItem(storageKeys.bookmarks, JSON.stringify(bookmarks))
+    window.localStorage.setItem(storageKeys.bookmarks[0], JSON.stringify(bookmarks))
   }, [bookmarks])
 
   useEffect(() => {
-    window.localStorage.setItem(storageKeys.interests, JSON.stringify(activeInterests))
+    window.localStorage.setItem(storageKeys.interests[0], JSON.stringify(activeInterests))
   }, [activeInterests])
 
   useEffect(() => {
-    window.localStorage.setItem(storageKeys.overrides, JSON.stringify(overrides))
+    window.localStorage.setItem(storageKeys.overrides[0], JSON.stringify(overrides))
   }, [overrides])
 
   function importBookmarks(rawInput: string, sourceName = 'pasted data') {

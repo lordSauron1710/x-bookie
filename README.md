@@ -1,4 +1,4 @@
-# SignalShelf
+# x-bookie
 
 Bookmark intelligence workspace for analyzing Twitter/X bookmarks with a local-first review flow, interest-driven categorization, and a three-column UI inspired by your baseline reference.
 
@@ -29,7 +29,7 @@ Vite React app
 ## Repository layout
 
 ```text
-bookmark_sorter/
+x-bookie/
 ├── public/
 │   ├── favicon.svg
 │   └── icons.svg

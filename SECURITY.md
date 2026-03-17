@@ -1,6 +1,6 @@
 # Security Policy
 
-SignalShelf is currently a client-heavy React app that imports bookmark data locally and stores user state in the browser. The main risks today are unsafe future auth patterns, accidental secret exposure, client-side injection, unsafe backend additions, and over-trusting browser state.
+x-bookie is currently a client-heavy React app that imports bookmark data locally and stores user state in the browser. The main risks today are unsafe future auth patterns, accidental secret exposure, client-side injection, unsafe backend additions, and over-trusting browser state.
 
 Treat security requirements as non-optional.
 
