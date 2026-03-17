@@ -7,8 +7,19 @@ import {
   type ReactNode,
 } from 'react'
 import './App.css'
+import { InterestIcon } from './components/InterestIcon'
 import { useBookmarkSource } from './hooks/useBookmarkSource'
 import { useInterestProfile } from './hooks/useInterestProfile'
+import {
+  avatarColor,
+  buildInsightCopy,
+  buildVelocitySeries,
+  getInitials,
+  percent,
+  polylinePoints,
+  relativeTime,
+  topSources,
+} from './lib/appView'
 import { analyzeBookmarks, starterInterests, type AnalyzedBookmark } from './lib/bookmarks'
 
 const customStyles: Record<string, CSSProperties> = {
@@ -479,221 +490,6 @@ const gradients = [
   'radial-gradient(circle, rgba(90,200,250,0.8) 0%, rgba(90,200,250,0) 70%)',
 ]
 
-const avatarPalette = ['#FFE0D6', '#DDE8FF', '#E7F1D3', '#F9E6B6', '#EAD9FF', '#D7EEF2']
-
-function TechIcon() {
-  return (
-    <svg viewBox="0 0 40 40" style={{ width: '40px', height: '40px', position: 'relative', zIndex: 2 }}>
-      <path fill="#000000" d="M14,14 h12 v12 h-12 z" />
-      <rect fill="#000000" x="4" y="4" width="6" height="6" />
-      <rect fill="#000000" x="30" y="4" width="6" height="6" />
-      <rect fill="#000000" x="4" y="30" width="6" height="6" />
-      <rect fill="#000000" x="30" y="30" width="6" height="6" />
-    </svg>
-  )
-}
-
-function DesignIcon() {
-  return (
-    <svg viewBox="0 0 40 40" style={{ width: '40px', height: '40px', position: 'relative', zIndex: 2 }}>
-      <line stroke="#000000" strokeWidth="2" strokeLinecap="square" fill="none" x1="20" y1="4" x2="20" y2="36" />
-      <line stroke="#000000" strokeWidth="2" strokeLinecap="square" fill="none" x1="4" y1="20" x2="36" y2="20" />
-      <line stroke="#000000" strokeWidth="2" strokeLinecap="square" fill="none" x1="8" y1="8" x2="32" y2="32" />
-      <line stroke="#000000" strokeWidth="2" strokeLinecap="square" fill="none" x1="8" y1="32" x2="32" y2="8" />
-    </svg>
-  )
-}
-
-function ThreadIcon() {
-  return (
-    <svg viewBox="0 0 40 40" style={{ width: '40px', height: '40px', position: 'relative', zIndex: 2 }}>
-      <polygon fill="#000000" points="20,4 36,20 20,36 4,20" />
-      <polygon fill="#F4F3F0" points="20,12 28,20 20,28 12,20" />
-    </svg>
-  )
-}
-
-function NewsIcon() {
-  return (
-    <svg viewBox="0 0 40 40" style={{ width: '40px', height: '40px', position: 'relative', zIndex: 2 }}>
-      <path stroke="#000000" strokeWidth="2" strokeLinecap="square" fill="none" d="M4,20 Q12,4 20,20 T36,20" />
-      <path stroke="#000000" strokeWidth="2" strokeLinecap="square" fill="none" d="M4,30 Q12,14 20,30 T36,30" />
-    </svg>
-  )
-}
-
-function DataIcon() {
-  return (
-    <svg viewBox="0 0 40 40" style={{ width: '40px', height: '40px', position: 'relative', zIndex: 2 }}>
-      <rect fill="#000000" x="4" y="16" width="6" height="24" />
-      <rect fill="#000000" x="14" y="8" width="6" height="32" />
-      <rect fill="#000000" x="24" y="20" width="6" height="20" />
-      <rect fill="#000000" x="34" y="12" width="6" height="28" />
-    </svg>
-  )
-}
-
-function OtherIcon() {
-  return (
-    <svg viewBox="0 0 40 40" style={{ width: '40px', height: '40px', position: 'relative', zIndex: 2 }}>
-      <circle stroke="#000000" strokeWidth="2" fill="none" cx="20" cy="20" r="16" strokeDasharray="4 4" />
-      <circle fill="#000000" cx="20" cy="20" r="6" />
-    </svg>
-  )
-}
-
-function hashSeed(value: string) {
-  let hash = 0
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash << 5) - hash + value.charCodeAt(index)
-    hash |= 0
-  }
-  return Math.abs(hash)
-}
-
-function getInitials(name: string) {
-  const parts = name.split(/\s+/).filter(Boolean)
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || 'BK'
-}
-
-function avatarColor(name: string) {
-  return avatarPalette[hashSeed(name) % avatarPalette.length]
-}
-
-function relativeTime(value: string | null) {
-  if (!value) return 'No date'
-
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.valueOf())) return value
-
-  const diffHours = Math.round((Date.now() - parsed.getTime()) / (1000 * 60 * 60))
-  if (diffHours < 24) return `${Math.max(diffHours, 1)}h ago`
-  if (diffHours < 24 * 7) return `${Math.round(diffHours / 24)}d ago`
-  return parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function percent(value: number) {
-  return `${Math.round(value * 100)}%`
-}
-
-function topSources(bookmarks: AnalyzedBookmark[]) {
-  const counts = new Map<string, { label: string; count: number }>()
-
-  bookmarks.forEach((bookmark) => {
-    const label = bookmark.handle ? `@${bookmark.handle}` : bookmark.author
-    const entry = counts.get(label)
-    if (entry) {
-      entry.count += 1
-      return
-    }
-    counts.set(label, { label, count: 1 })
-  })
-
-  return Array.from(counts.values())
-    .sort((left, right) => right.count - left.count)
-    .slice(0, 4)
-}
-
-function buildInsightCopy(bookmarks: AnalyzedBookmark[], topLabel: string, lane: string) {
-  if (bookmarks.length === 0) {
-    return 'Connect X and sync your bookmarks to see momentum, source concentration, and next-action patterns.'
-  }
-
-  const datedCount = bookmarks.filter((bookmark) => bookmark.createdAt).length
-  const cadenceNote =
-    datedCount > 0
-      ? `Most recent saves lean toward ${topLabel}.`
-      : 'X returned limited timestamps, so cadence is estimated from the bookmark order.'
-
-  return `${cadenceNote} The strongest next step right now is "${lane.toLowerCase()}".`
-}
-
-function polylinePoints(values: number[], width = 300, height = 180, maxValue = 1) {
-  if (values.length === 0) return ''
-  const step = values.length > 1 ? width / (values.length - 1) : width
-  return values
-    .map((value, index) => {
-      const x = Math.round(index * step)
-      const y = Math.round(height - (value / Math.max(maxValue, 1)) * (height - 18))
-      return `${x},${y}`
-    })
-    .join(' ')
-}
-
-function buildVelocitySeries(bookmarks: AnalyzedBookmark[], segment: 'Week' | 'Month' | 'Year') {
-  const bucketCount = segment === 'Week' ? 7 : segment === 'Month' ? 6 : 12
-  const windowDays = segment === 'Week' ? 7 : segment === 'Month' ? 30 : 365
-  const now = Date.now()
-  const topIds = Array.from(
-    new Set(
-      bookmarks
-        .map((bookmark) => bookmark.matchedInterestId)
-        .filter((id) => id !== 'review-later'),
-    ),
-  ).slice(0, 3)
-
-  const seriesMap = new Map<string, number[]>()
-  topIds.forEach((id) => {
-    seriesMap.set(id, Array(bucketCount).fill(0))
-  })
-
-  const withDates = bookmarks.filter((bookmark) => {
-    if (!bookmark.createdAt) return false
-    const parsed = new Date(bookmark.createdAt)
-    return !Number.isNaN(parsed.valueOf())
-  })
-
-  if (withDates.length > 0) {
-    withDates.forEach((bookmark) => {
-      if (!seriesMap.has(bookmark.matchedInterestId)) return
-      const parsed = new Date(bookmark.createdAt as string)
-      const diffDays = (now - parsed.getTime()) / (1000 * 60 * 60 * 24)
-      if (diffDays < 0 || diffDays > windowDays) return
-      const bucket = Math.min(
-        bucketCount - 1,
-        Math.floor(((windowDays - diffDays) / windowDays) * bucketCount),
-      )
-      const series = seriesMap.get(bookmark.matchedInterestId)
-      if (series) {
-        series[Math.max(bucket, 0)] += 1
-      }
-    })
-  }
-
-  const hasValues = Array.from(seriesMap.values()).some((series) => series.some((value) => value > 0))
-
-  if (!hasValues) {
-    const fallback = bookmarks.filter((bookmark) => seriesMap.has(bookmark.matchedInterestId))
-    fallback.forEach((bookmark, index) => {
-      const bucket = Math.round((index / Math.max(fallback.length - 1, 1)) * (bucketCount - 1))
-      const series = seriesMap.get(bookmark.matchedInterestId)
-      if (series) {
-        series[bucket] += 1
-      }
-    })
-  }
-
-  const maxValue = Math.max(
-    1,
-    ...Array.from(seriesMap.values()).flatMap((series) => series),
-  )
-
-  return {
-    maxValue,
-    topIds,
-    seriesMap,
-  }
-}
-
-function iconForInterest(interestId: string) {
-  if (interestId.includes('ai') || interestId.includes('dev')) return <TechIcon />
-  if (interestId.includes('design') || interestId.includes('product')) return <DesignIcon />
-  if (interestId.includes('growth') || interestId.includes('writing')) return <ThreadIcon />
-  if (interestId.includes('invest')) return <DataIcon />
-  if (interestId.includes('review')) return <OtherIcon />
-  return <NewsIcon />
-}
-
 type CategoryItemProps = {
   label: string
   count: number
@@ -897,14 +693,14 @@ function App() {
       id: 'all',
       label: 'All',
       count: analysis.bookmarks.length,
-      icon: <OtherIcon />,
+      icon: <InterestIcon interestId="review-later" />,
       gradient: gradients[5],
     },
     ...analysis.stats.map((stat, index) => ({
       id: stat.interestId,
       label: stat.label,
       count: stat.count,
-      icon: iconForInterest(stat.interestId),
+      icon: <InterestIcon interestId={stat.interestId} />,
       gradient: gradients[index % gradients.length],
     })),
   ]
@@ -1107,7 +903,7 @@ function App() {
               <BookmarkItem
                 key={bookmark.id}
                 bookmark={bookmark}
-                icon={iconForInterest(bookmark.matchedInterestId)}
+                icon={<InterestIcon interestId={bookmark.matchedInterestId} />}
                 isSelected={selectedBookmark?.id === bookmark.id}
                 onClick={() => setSelectedBookmarkId(bookmark.id)}
               />

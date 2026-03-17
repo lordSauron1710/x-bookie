@@ -6,6 +6,12 @@ const envSchema = z.object({
   APP_ORIGIN: z.string().url().default('http://localhost:5173'),
   API_ORIGIN: z.string().url().default('http://localhost:8787'),
   SESSION_COOKIE_SECRET: z.string().min(32).default('dev-session-secret-change-me-immediately'),
+  DATABASE_URL: z.string().url().optional(),
+  DATABASE_SSL: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
+  TOKEN_ENCRYPTION_KEY: z.string().trim().min(1).optional(),
   X_CLIENT_ID: z.string().trim().min(1).optional(),
   X_CLIENT_SECRET: z.string().trim().min(1).optional(),
   X_REDIRECT_URI: z.string().url().optional(),
@@ -18,6 +24,10 @@ const parsed = envSchema.parse(process.env)
 
 if (parsed.NODE_ENV === 'production' && parsed.SESSION_COOKIE_SECRET === 'dev-session-secret-change-me-immediately') {
   throw new Error('SESSION_COOKIE_SECRET must be set in production.')
+}
+
+if (parsed.DATABASE_URL && !parsed.TOKEN_ENCRYPTION_KEY) {
+  throw new Error('TOKEN_ENCRYPTION_KEY must be set when DATABASE_URL is configured.')
 }
 
 export const serverConfig = {

@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express'
 
-import type { StoredSession } from '../store/memoryStore.js'
-import { store } from '../store/memoryStore.js'
+import type { AppStore, StoredSession } from '../store/types.js'
 
 const authCookieName = 'xbookie_oauth_state'
 const sessionCookieName = 'xbookie_session'
@@ -58,7 +57,7 @@ export function clearSessionCookie(response: Response, secure: boolean) {
   })
 }
 
-export function getSessionFromRequest(request: Request) {
+export async function getSessionFromRequest(request: Request, store: AppStore) {
   const sessionId = request.signedCookies[sessionCookieName] as string | undefined
   return store.getSession(sessionId)
 }

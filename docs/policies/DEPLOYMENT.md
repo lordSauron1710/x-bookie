@@ -7,15 +7,16 @@ x-bookie now ships as a frontend plus backend application.
 - Frontend: Vite + React
 - Backend: Express
 - Standard build command: `npm run build`
+- Standard test command: `npm test`
 - Standard start command: `npm run start`
-- Runtime posture: X-only auth and bookmark sync, with in-memory backend storage
+- Runtime posture: X-only auth and bookmark sync, with memory storage by default and optional Postgres-backed persistence
 
 ## Deployment Rules
 
 - Production deployments must use the production build output.
 - Deploy the backend and frontend so cookie-based auth works correctly.
   - Same-origin deployment is preferred when possible.
-- Do not rely on the in-memory store as the final production persistence model.
+- Production deployments should set `DATABASE_URL` and `TOKEN_ENCRYPTION_KEY` so sessions, tokens, and synced bookmarks survive restarts.
 - Any future durable backend component must document its hosting assumptions clearly.
 - Any new environment variable must be documented in [ENV_VARIABLES.md](./ENV_VARIABLES.md) and `README.md`.
 - Preview deployments must not silently point at privileged production X apps.
@@ -35,6 +36,7 @@ x-bookie now ships as a frontend plus backend application.
 
 - [ ] `npm run build`
 - [ ] `npm run lint`
+- [ ] `npm test`
 - [ ] `npm audit`
 - [ ] `README.md` reflects deploy and config changes
 - [ ] External services and secrets are documented

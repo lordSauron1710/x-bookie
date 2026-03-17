@@ -10,6 +10,9 @@ x-bookie now requires environment variables for backend auth and deployment.
 | `APP_ORIGIN` | yes for real deploys | server | Browser origin used for redirects |
 | `API_ORIGIN` | yes for real deploys | server | Public backend origin |
 | `SESSION_COOKIE_SECRET` | yes | server | Cookie signing secret |
+| `DATABASE_URL` | no | server | Enables Postgres-backed session/token/bookmark storage |
+| `DATABASE_SSL` | no | server | Enables TLS for the Postgres client connection |
+| `TOKEN_ENCRYPTION_KEY` | yes when `DATABASE_URL` is set | server | Base64-encoded 32-byte key for encrypting X tokens at rest |
 | `X_CLIENT_ID` | yes for X auth | server | X OAuth client id |
 | `X_CLIENT_SECRET` | depends on X app type | server | X OAuth client secret |
 | `X_REDIRECT_URI` | no | server | Override callback URL |
@@ -24,6 +27,7 @@ x-bookie now requires environment variables for backend auth and deployment.
 - Document every new variable in `README.md`.
 - Any `VITE_*` value is public by definition and must be safe to expose.
 - Keep secrets server-only.
+- `TOKEN_ENCRYPTION_KEY` must be a base64-encoded 32-byte value.
 - Do not hardcode API URLs, tokens, client secrets, or environment-specific IDs in source files.
 - Remove unused variables when the code that depends on them is removed.
 
@@ -39,3 +43,4 @@ x-bookie now requires environment variables for backend auth and deployment.
 - [ ] `README.md` reflects the current variable set
 - [ ] Public `VITE_*` variables are safe to expose
 - [ ] No client code imports or logs server-only secrets
+- [ ] Database secrets and token-encryption keys are stored only in server/runtime config

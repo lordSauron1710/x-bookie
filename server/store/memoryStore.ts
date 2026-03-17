@@ -1,40 +1,17 @@
 import { randomUUID } from 'node:crypto'
 
-import type { BookmarkRecord, XAccountSummary } from '../../shared/contracts.js'
-
-export type StoredTokens = {
-  accessToken: string
-  refreshToken: string | null
-  accessTokenExpiresAt: string | null
-  scope: string[]
-}
-
-export type StoredSession = {
-  id: string
-  account: XAccountSummary
-  tokens: StoredTokens
-  createdAt: string
-  lastSeenAt: string
-}
-
-type AuthTransaction = {
-  verifier: string
-  createdAt: number
-}
-
-type StoredBookmarkFeed = {
-  items: BookmarkRecord[]
-  lastSyncedAt: string | null
-}
+import type { BookmarkRecord } from '../../shared/contracts.js'
+import type { AppStore, AuthTransaction, StoredBookmarkFeed, StoredSession, StoredTokens } from './types.js'
 
 const AUTH_TTL_MS = 10 * 60 * 1000
 
-export class MemoryStore {
+export class MemoryStore implements AppStore {
+  readonly kind = 'memory' as const
   private readonly authTransactions = new Map<string, AuthTransaction>()
   private readonly sessions = new Map<string, StoredSession>()
   private readonly bookmarksByUser = new Map<string, StoredBookmarkFeed>()
 
-  createAuthTransaction(verifier: string) {
+  async createAuthTransaction(verifier: string) {
     const state = randomUUID()
     this.authTransactions.set(state, {
       verifier,
@@ -44,7 +21,7 @@ export class MemoryStore {
     return state
   }
 
-  consumeAuthTransaction(state: string) {
+  async consumeAuthTransaction(state: string) {
     const transaction = this.authTransactions.get(state)
     this.authTransactions.delete(state)
 
@@ -53,7 +30,7 @@ export class MemoryStore {
     return transaction
   }
 
-  createSession(account: XAccountSummary, tokens: StoredTokens) {
+  async createSession(account: StoredSession['account'], tokens: StoredTokens) {
     const id = randomUUID()
     const now = new Date().toISOString()
 
@@ -68,7 +45,7 @@ export class MemoryStore {
     return id
   }
 
-  getSession(id: string | undefined) {
+  async getSession(id: string | undefined) {
     if (!id) return null
 
     const session = this.sessions.get(id)
@@ -78,7 +55,7 @@ export class MemoryStore {
     return session
   }
 
-  updateSessionTokens(id: string, tokens: StoredTokens) {
+  async updateSessionTokens(id: string, tokens: StoredTokens) {
     const session = this.sessions.get(id)
     if (!session) return null
 
@@ -87,16 +64,16 @@ export class MemoryStore {
     return session
   }
 
-  deleteSession(id: string | undefined) {
+  async deleteSession(id: string | undefined) {
     if (!id) return
     this.sessions.delete(id)
   }
 
-  getBookmarks(xUserId: string) {
+  async getBookmarks(xUserId: string) {
     return this.bookmarksByUser.get(xUserId) ?? { items: [], lastSyncedAt: null }
   }
 
-  replaceBookmarks(xUserId: string, items: BookmarkRecord[]) {
+  async replaceBookmarks(xUserId: string, items: BookmarkRecord[]) {
     const feed = {
       items,
       lastSyncedAt: new Date().toISOString(),
@@ -115,6 +92,14 @@ export class MemoryStore {
       }
     }
   }
+
+  async close() {
+    this.authTransactions.clear()
+    this.sessions.clear()
+    this.bookmarksByUser.clear()
+  }
 }
 
-export const store = new MemoryStore()
+export function createMemoryStore() {
+  return new MemoryStore()
+}

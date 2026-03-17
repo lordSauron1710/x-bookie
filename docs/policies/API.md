@@ -7,6 +7,7 @@ That surface is security-critical.
 ## Current State
 
 - `GET /api/health`
+  - Safe health payload may include non-secret runtime posture such as active store mode
 - `GET /api/session`
 - `GET /api/bookmarks`
 - `POST /api/bookmarks/sync`

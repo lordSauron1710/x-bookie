@@ -10,7 +10,7 @@ Authentication is handled server-side through OAuth 2.0 PKCE and a signed `HttpO
 - No email/password flow
 - No roles or permission model
 - No client-side authorization boundary
-- Session storage is currently in-memory on the backend
+- Session storage is memory-backed by default and can move to Postgres when configured
 
 ## Current Rules
 
@@ -19,6 +19,7 @@ Authentication is handled server-side through OAuth 2.0 PKCE and a signed `HttpO
 - Use signed `HttpOnly`, `Secure` cookies in production.
 - Never store long-lived auth tokens or provider tokens in browser storage.
 - X provider tokens must remain server-side.
+- If provider tokens are stored durably, encrypt them at rest.
 - Any future privileged behavior must be backed by server-side verification.
 
 ## If Authentication Is Expanded

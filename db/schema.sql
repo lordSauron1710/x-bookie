@@ -3,6 +3,7 @@ create table if not exists app_users (
   x_user_id text not null unique,
   x_handle text not null,
   x_name text not null,
+  x_profile_image_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -11,7 +12,8 @@ create table if not exists user_sessions (
   session_id uuid primary key,
   user_id uuid not null references app_users(user_id) on delete cascade,
   expires_at timestamptz not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now()
 );
 
 create index if not exists user_sessions_user_id_idx on user_sessions (user_id);
@@ -23,7 +25,7 @@ create table if not exists x_connections (
   refresh_token_ciphertext text,
   scope text[] not null default '{}',
   token_type text not null,
-  expires_at timestamptz not null,
+  expires_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -55,3 +57,11 @@ create table if not exists bookmark_sync_runs (
 );
 
 create index if not exists bookmark_sync_runs_user_id_idx on bookmark_sync_runs (user_id, started_at desc);
+
+create table if not exists oauth_transactions (
+  state uuid primary key,
+  verifier text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists oauth_transactions_created_at_idx on oauth_transactions (created_at);

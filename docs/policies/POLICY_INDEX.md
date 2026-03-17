@@ -15,9 +15,9 @@ This file is the entrypoint for the repository policy set.
 - Express backend for X OAuth, sessions, and bookmark sync
 - X-only authentication model
 - Signed server-side cookie sessions
-- In-memory server store for sessions and synced bookmarks
+- Memory-backed server store by default, with optional Postgres-backed persistence
 - Browser `localStorage` only for per-account interests and overrides
-- Draft Postgres schema present in `db/schema.sql`, but no durable database is active yet
+- Postgres schema and runtime store available when `DATABASE_URL` is configured
 - Environment variables are required for X auth and production deployment
 
 ## Read These For Every Change

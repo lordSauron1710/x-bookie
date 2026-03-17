@@ -28,10 +28,10 @@ Express server
   -> X OAuth start/callback routes
   -> Signed cookie session endpoints
   -> Bookmark sync endpoint
-  -> In-memory session/bookmark store
+  -> Pluggable store (memory by default, Postgres when configured)
 
 Planned next step
-  -> Durable Postgres-backed session/token/bookmark storage
+  -> Frontend decomposition and model-backed bookmark classification
 ```
 
 ## Current runtime posture
@@ -41,9 +41,9 @@ Planned next step
 | Auth | X-only OAuth 2.0 PKCE via backend |
 | Sessions | Signed `HttpOnly` cookie |
 | Bookmark sync | Live X fetch through backend |
-| Bookmark persistence | In-memory server store only |
+| Bookmark persistence | In-memory by default, Postgres when `DATABASE_URL` is configured |
 | Interest profile | Browser `localStorage`, scoped by X user id |
-| Database | Not active yet; draft schema lives in `db/schema.sql` |
+| Database | Optional Postgres runtime with schema auto-init from `db/schema.sql` |
 
 ## Repository layout
 
@@ -82,6 +82,7 @@ x-bookie/
 - Node.js 20+
 - npm 10+
 - X developer app credentials for live auth/sync
+- Postgres 15+ if you want durable server storage
 
 ## Quick start
 
@@ -98,6 +99,19 @@ cp .env.example .env
 ```
 
 3. Fill in the X settings in `.env`.
+
+If you want durable sessions, encrypted token storage, and persisted synced bookmarks, also set:
+
+```text
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/x_bookie
+TOKEN_ENCRYPTION_KEY=<base64-encoded-32-byte-key>
+```
+
+You can generate the encryption key with:
+
+```bash
+openssl rand -base64 32
+```
 
 For local development, register this callback URL in your X app settings:
 
@@ -122,6 +136,7 @@ The Vite dev server proxies `/api/*` requests to the backend by default.
 
 ```bash
 npm run build
+npm test
 npm run start
 ```
 
@@ -134,6 +149,8 @@ See [.env.example](./.env.example) and [ENV_VARIABLES.md](./docs/policies/ENV_VA
 Important ones:
 
 - `SESSION_COOKIE_SECRET`
+- `DATABASE_URL` for durable server storage
+- `TOKEN_ENCRYPTION_KEY` for encrypting X tokens at rest when Postgres is enabled
 - `X_CLIENT_ID`
 - `X_CLIENT_SECRET` when your X app type requires it
 - `APP_ORIGIN`
@@ -142,6 +159,7 @@ Important ones:
 ## Current API surface
 
 - `GET /api/health`
+  - Returns `ok` plus the active store mode (`memory` or `postgres`)
 - `GET /api/session`
 - `GET /api/bookmarks`
 - `POST /api/bookmarks/sync`
@@ -152,16 +170,16 @@ Important ones:
 ## Security baseline
 
 - X tokens stay server-side.
+- If Postgres is enabled, X tokens are encrypted before storage.
 - Browser code should never receive X provider secrets.
 - Sessions use signed `HttpOnly` cookies.
-- The current backend store is in-memory and not durable.
-- If this repo adds durable persistence, move tokens, sessions, and synced bookmarks into a real database and update the policy docs in the same change.
+- Durable persistence is opt-in through `DATABASE_URL`; otherwise the backend falls back to memory.
 
 ## Project status
 
-- Current state: X-only full-stack scaffold with live auth routes, bookmark sync routes, a shared analysis UI, and per-account local interest profiles.
-- Current limitation: backend sessions and synced bookmarks are in-memory, so restarts clear server-side data.
-- Next milestone: replace the in-memory store with Postgres using [`db/schema.sql`](./db/schema.sql).
+- Current state: X-only full-stack MVP with live auth routes, bookmark sync routes, a shared analysis UI, optional Postgres-backed persistence, and per-account local interest profiles.
+- Current limitation: bookmark analysis is still heuristic, frontend UI logic is still concentrated in large files, and automated coverage is still early.
+- Next milestone: decompose the UI and introduce a model-backed classifier behind the existing analysis contract.
 
 ## Documentation map
 

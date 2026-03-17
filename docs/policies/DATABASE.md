@@ -1,15 +1,15 @@
 # Database Policy
 
-x-bookie does not use a durable database at runtime yet.
+x-bookie can run with a durable Postgres-backed store when database configuration is present.
 
-The current backend store is in-memory. Sessions and synced bookmarks are lost on restart.
+Without that configuration, the backend falls back to the in-memory store and server-side data is lost on restart.
 
 ## Current State
 
-- No active database client in the runtime request path
-- No active migrations
-- Draft Postgres schema exists in `db/schema.sql`
-- No durable synced user data yet
+- Postgres is optional in the runtime request path
+- The schema is initialized from `db/schema.sql` at startup when Postgres is enabled
+- Durable data includes users, sessions, encrypted X connections, synced bookmarks, and OAuth transactions
+- No browser code can reach the database directly
 
 ## Rules If Durable Persistence Is Added
 
@@ -18,6 +18,7 @@ The current backend store is in-memory. Sessions and synced bookmarks are lost o
 - Use parameterized queries or a safe query builder.
 - Apply least privilege for database access.
 - Encrypt or otherwise protect sensitive token material at rest.
+- Require `TOKEN_ENCRYPTION_KEY` before enabling Postgres token storage.
 - Review migrations for destructive changes, accidental public access, and unsafe defaults.
 - Document the data model, retention expectations, and operational assumptions in `README.md`.
 
