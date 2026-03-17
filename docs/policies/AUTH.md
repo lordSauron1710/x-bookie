@@ -1,41 +1,37 @@
 # Authentication And Authorization Policy
 
-There is no authentication or authorization layer in this repository today.
+x-bookie currently uses X as its only identity provider.
 
-That is the current design, not a shortcut.
-
-Do not introduce hidden admin behavior, client-side role checks, or token-based access without adding a real server-side trust boundary.
+Authentication is handled server-side through OAuth 2.0 PKCE and a signed `HttpOnly` session cookie.
 
 ## Current State
 
-- No login or signup flow
-- No sessions
+- X-only login
+- No email/password flow
 - No roles or permission model
-- No protected routes
-- No backend authorization checks
+- No client-side authorization boundary
+- Session storage is currently in-memory on the backend
 
-## If Authentication Is Added
+## Current Rules
 
 - All authentication checks must be enforced server-side.
-  - Client state may control UI, but it must not be treated as authorization.
-- Prefer `HttpOnly`, `Secure`, `SameSite=Lax` or `SameSite=Strict` cookies for sessions.
-- Never store long-lived auth tokens in `localStorage`, `sessionStorage`, or query parameters.
+- Client state may control UI, but it must not be treated as authorization.
+- Use signed `HttpOnly`, `Secure` cookies in production.
+- Never store long-lived auth tokens or provider tokens in browser storage.
+- X provider tokens must remain server-side.
+- Any future privileged behavior must be backed by server-side verification.
+
+## If Authentication Is Expanded
+
 - Access tokens must be short-lived.
-- Refresh tokens must rotate and be invalidated on reuse.
+- Refresh tokens must rotate and be invalidated on reuse where the provider supports it.
 - State-changing auth endpoints must include brute-force protection and CSRF defenses where applicable.
-- Passwords must be hashed with Argon2, scrypt, or bcrypt.
-- Any privileged behavior must be backed by server-side role verification.
-
-## Authorization Rules
-
-- Apply least privilege by default.
-- Separate anonymous, authenticated, and administrative capabilities clearly.
-- Ownership checks must happen server-side for any user-scoped resource.
-- Do not rely on hidden buttons or disabled controls as security.
+- If you add roles, document them and enforce them server-side.
+- If you move session storage or token storage into a database, update [DATABASE.md](./DATABASE.md) in the same PR.
 
 ## Required Changes In The Same PR
 
-If auth is added, update all of the following together:
+If auth behavior changes, update all of the following together:
 
 - [SECURITY.md](./SECURITY.md)
 - [API.md](./API.md)
@@ -43,13 +39,12 @@ If auth is added, update all of the following together:
 - [DEPLOYMENT.md](./DEPLOYMENT.md)
 - `README.md`
 
-If auth also introduces synced user data, update [DATABASE.md](./DATABASE.md) too.
+If auth also introduces durable persistence, update [DATABASE.md](./DATABASE.md) too.
 
 ## Pre-Merge Checklist For Auth Work
 
-- [ ] Server-side session or token verification exists
-- [ ] Protected routes or endpoints return 401 / 403 correctly
-- [ ] No tokens are exposed in client bundles, URLs, or logs
-- [ ] Login and recovery flows are rate limited
-- [ ] Logout and session invalidation behavior are defined
-- [ ] Any roles are documented and enforced server-side
+- [ ] Server-side session verification exists
+- [ ] No provider tokens are exposed in client bundles, URLs, or logs
+- [ ] Cookies are `HttpOnly` and production-safe
+- [ ] Auth start/callback behavior is documented
+- [ ] Logout behavior is defined

@@ -7,22 +7,9 @@ import {
   type ReactNode,
 } from 'react'
 import './App.css'
-import { demoBookmarks } from './data/demoBookmarks'
-import {
-  analyzeBookmarks,
-  createCustomInterest,
-  parseBookmarkInput,
-  starterInterests,
-  type AnalyzedBookmark,
-  type BookmarkRecord,
-  type InterestDefinition,
-} from './lib/bookmarks'
-
-const storageKeys = {
-  bookmarks: ['x-bookie/bookmarks/v1', 'signal-shelf/bookmarks/v1'],
-  interests: ['x-bookie/interests/v1', 'signal-shelf/interests/v1'],
-  overrides: ['x-bookie/overrides/v1', 'signal-shelf/overrides/v1'],
-}
+import { useBookmarkSource } from './hooks/useBookmarkSource'
+import { useInterestProfile } from './hooks/useInterestProfile'
+import { analyzeBookmarks, starterInterests, type AnalyzedBookmark } from './lib/bookmarks'
 
 const customStyles: Record<string, CSSProperties> = {
   appContainer: {
@@ -555,23 +542,6 @@ function OtherIcon() {
   )
 }
 
-function readStoredJson<T>(keys: string | string[], fallback: T) {
-  const orderedKeys = Array.isArray(keys) ? keys : [keys]
-
-  for (const key of orderedKeys) {
-    const rawValue = window.localStorage.getItem(key)
-    if (!rawValue) continue
-
-    try {
-      return JSON.parse(rawValue) as T
-    } catch {
-      continue
-    }
-  }
-
-  return fallback
-}
-
 function hashSeed(value: string) {
   let hash = 0
   for (let index = 0; index < value.length; index += 1) {
@@ -625,11 +595,15 @@ function topSources(bookmarks: AnalyzedBookmark[]) {
 }
 
 function buildInsightCopy(bookmarks: AnalyzedBookmark[], topLabel: string, lane: string) {
+  if (bookmarks.length === 0) {
+    return 'Connect X and sync your bookmarks to see momentum, source concentration, and next-action patterns.'
+  }
+
   const datedCount = bookmarks.filter((bookmark) => bookmark.createdAt).length
   const cadenceNote =
     datedCount > 0
       ? `Most recent saves lean toward ${topLabel}.`
-      : 'Your imported data has limited timestamps, so cadence is estimated from the bookmark order.'
+      : 'X returned limited timestamps, so cadence is estimated from the bookmark order.'
 
   return `${cadenceNote} The strongest next step right now is "${lane.toLowerCase()}".`
 }
@@ -845,25 +819,17 @@ function BookmarkItem({ bookmark, isSelected, icon, onClick }: BookmarkItemProps
 }
 
 function App() {
-  const [bookmarks, setBookmarks] = useState<BookmarkRecord[]>(() =>
-    readStoredJson(storageKeys.bookmarks, demoBookmarks),
-  )
-  const [activeInterests, setActiveInterests] = useState<InterestDefinition[]>(() =>
-    readStoredJson(storageKeys.interests, starterInterests),
-  )
-  const [overrides, setOverrides] = useState<Record<string, string>>(() =>
-    readStoredJson(storageKeys.overrides, {}),
-  )
+  const { bookmarks, session, statusMessage, isBootstrapping, isSyncing, connectX, signOut, syncFromX } =
+    useBookmarkSource()
+  const storageScope = session?.account?.xUserId ?? 'anonymous'
+  const { activeInterests, overrides, profileMessage, addCustomInterest, clearOverride, setOverride, toggleStarterInterest } =
+    useInterestProfile(storageScope)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeCategoryId, setActiveCategoryId] = useState('all')
   const [activeType, setActiveType] = useState('All')
   const [activeSegment, setActiveSegment] = useState<'Week' | 'Month' | 'Year'>('Month')
   const [selectedBookmarkId, setSelectedBookmarkId] = useState<string | null>(null)
-  const [pasteValue, setPasteValue] = useState('')
   const [customInterest, setCustomInterest] = useState('')
-  const [statusMessage, setStatusMessage] = useState(
-    'Demo bookmarks are loaded. Import a JSON, CSV, or pasted text export to replace them.',
-  )
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth)
   const [isPending, startTransition] = useTransition()
 
@@ -907,94 +873,24 @@ function App() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  useEffect(() => {
-    window.localStorage.setItem(storageKeys.bookmarks[0], JSON.stringify(bookmarks))
-  }, [bookmarks])
+  function handleAddCustomInterest() {
+    const pendingLabel = customInterest
 
-  useEffect(() => {
-    window.localStorage.setItem(storageKeys.interests[0], JSON.stringify(activeInterests))
-  }, [activeInterests])
-
-  useEffect(() => {
-    window.localStorage.setItem(storageKeys.overrides[0], JSON.stringify(overrides))
-  }, [overrides])
-
-  function importBookmarks(rawInput: string, sourceName = 'pasted data') {
-    try {
-      const parsed = parseBookmarkInput(rawInput, sourceName)
-      if (parsed.length === 0) {
-        setStatusMessage('No bookmarks were detected. Try JSON, CSV, or one bookmark per paragraph.')
-        return
+    startTransition(() => {
+      const added = addCustomInterest(pendingLabel)
+      if (added) {
+        setCustomInterest('')
       }
-
-      startTransition(() => {
-        setBookmarks(parsed)
-        setOverrides({})
-        setActiveCategoryId('all')
-        setActiveType('All')
-      })
-
-      setStatusMessage(`Imported ${parsed.length} bookmarks from ${sourceName}.`)
-      setPasteValue('')
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Import failed. Check the file format and try again.'
-      setStatusMessage(message)
-    }
-  }
-
-  async function handleFile(file: File) {
-    const rawInput = await file.text()
-    importBookmarks(rawInput, file.name)
-  }
-
-  function loadDemo() {
-    startTransition(() => {
-      setBookmarks(demoBookmarks)
-      setOverrides({})
-      setActiveCategoryId('all')
-      setActiveType('All')
-    })
-    setStatusMessage('Demo bookmarks reloaded.')
-  }
-
-  function toggleStarterInterest(interest: InterestDefinition) {
-    const isActive = activeInterests.some((item) => item.id === interest.id)
-    startTransition(() => {
-      setActiveInterests((current) =>
-        isActive ? current.filter((item) => item.id !== interest.id) : [...current, interest],
-      )
-      setOverrides({})
     })
   }
 
-  function addCustomInterest() {
-    const created = createCustomInterest(customInterest)
-    if (!created) return
-
-    if (activeInterests.some((interest) => interest.label.toLowerCase() === created.label.toLowerCase())) {
-      setStatusMessage(`"${created.label}" is already part of your profile.`)
-      setCustomInterest('')
-      return
-    }
-
-    startTransition(() => {
-      setActiveInterests((current) => [...current, created])
-      setOverrides({})
-    })
-    setStatusMessage(`Added "${created.label}" to your interest profile.`)
-    setCustomInterest('')
-  }
-
-  function clearOverride(bookmarkId: string) {
-    startTransition(() => {
-      setOverrides((current) => {
-        const next = { ...current }
-        delete next[bookmarkId]
-        return next
-      })
-    })
-  }
+  const canConnectX = Boolean(session?.xAuthConfigured && !session?.authenticated && !isBootstrapping)
+  const canSyncX = Boolean(session?.authenticated && session.account)
+  const accountStatusCopy = !session?.xAuthConfigured
+    ? 'Set the X server env vars before Connect X can run.'
+    : session?.authenticated && session.account
+      ? `Connected as @${session.account.username}. Syncing pulls the latest bookmarked posts from X into your app session store.`
+      : 'Connect X to load your live bookmarks and replace the empty local shell.'
 
   const categoryTiles = [
     {
@@ -1034,13 +930,35 @@ function App() {
   }
 
   const segments: Array<'Week' | 'Month' | 'Year'> = ['Week', 'Month', 'Year']
+  const emptyStateMessage =
+    bookmarks.length === 0
+      ? session?.authenticated
+        ? 'Sync bookmarks from X to start sorting your feed.'
+        : 'Connect X to load your bookmarks.'
+      : 'No bookmarks match the current filters. Change the category, content type, or search term.'
+  const infoBarPrimary = analysis.bookmarks.length > 0 ? `${analysis.summary.categorized} auto-categorized` : 'No bookmarks loaded yet'
+  const infoBarSecondary =
+    analysis.bookmarks.length > 0 ? `${analysis.summary.topInterestLabel} is leading` : 'Connect and sync X to populate the feed'
 
   return (
     <div style={appContainerStyle}>
       <div style={columnStyle}>
         <div style={customStyles.viewHeader}>
           <span style={customStyles.viewTitle}>Taxonomy</span>
-          <button style={customStyles.iconBtn} onClick={loadDemo}>
+          <button
+            style={customStyles.iconBtn}
+            onClick={() => {
+              if (canSyncX) {
+                void syncFromX()
+                return
+              }
+
+              if (canConnectX) {
+                connectX()
+              }
+            }}
+            aria-label={canSyncX ? 'Sync bookmarks from X' : 'Connect X'}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
               <path d="M3 3v5h5" />
@@ -1063,43 +981,49 @@ function App() {
           ))}
         </div>
 
-        <div style={customStyles.sectionLabel}>Import Feed</div>
+        <div style={customStyles.sectionLabel}>X Account</div>
+        <div style={customStyles.statusBox}>{accountStatusCopy}</div>
         <div style={customStyles.actionRow}>
-          <label style={customStyles.primaryButton}>
-            Import file
-            <input
-              type="file"
-              accept=".json,.csv,.txt"
-              style={customStyles.hiddenInput}
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (file) {
-                  void handleFile(file)
-                }
-              }}
-            />
-          </label>
-          <button style={customStyles.secondaryButton} onClick={loadDemo}>
-            Load demo
+          <button
+            style={{
+              ...customStyles.primaryButton,
+              opacity: canConnectX ? 1 : 0.6,
+              cursor: canConnectX ? 'pointer' : 'not-allowed',
+            }}
+            onClick={connectX}
+            disabled={!canConnectX}
+          >
+            {session?.authenticated && session.account ? `Connected @${session.account.username}` : 'Connect X'}
+          </button>
+          <button
+            style={{
+              ...customStyles.secondaryButton,
+              opacity: canSyncX ? 1 : 0.6,
+              cursor: canSyncX ? 'pointer' : 'not-allowed',
+            }}
+            onClick={() => {
+              void syncFromX()
+            }}
+            disabled={!canSyncX || isSyncing}
+          >
+            {isSyncing ? 'Syncing...' : 'Sync now'}
+          </button>
+          <button
+            style={{
+              ...customStyles.secondaryButton,
+              opacity: canSyncX ? 1 : 0.6,
+              cursor: canSyncX ? 'pointer' : 'not-allowed',
+            }}
+            onClick={() => {
+              void signOut()
+            }}
+            disabled={!canSyncX}
+          >
+            Sign out
           </button>
         </div>
         <div style={customStyles.statusBox}>
           {isPending ? 'Re-sorting bookmarks...' : statusMessage}
-        </div>
-        <textarea
-          value={pasteValue}
-          onChange={(event) => setPasteValue(event.target.value)}
-          style={customStyles.pasteArea}
-          placeholder="Paste raw X bookmark JSON, CSV rows, or one bookmark per paragraph."
-        />
-        <div style={customStyles.actionRow}>
-          <button
-            style={customStyles.secondaryButton}
-            onClick={() => importBookmarks(pasteValue)}
-            disabled={!pasteValue.trim()}
-          >
-            Analyze paste
-          </button>
         </div>
 
         <div style={customStyles.sectionLabel}>Refine Profile</div>
@@ -1110,17 +1034,22 @@ function App() {
           placeholder="Add a custom interest"
         />
         <div style={customStyles.actionRow}>
-          <button style={customStyles.secondaryButton} onClick={addCustomInterest}>
+          <button style={customStyles.secondaryButton} onClick={handleAddCustomInterest}>
             Add interest
           </button>
         </div>
+        {profileMessage ? <div style={customStyles.statusBox}>{profileMessage}</div> : null}
         <div style={customStyles.tagList}>
           {starterInterests.map((interest) => (
             <FilterPill
               key={interest.id}
               label={interest.label}
               active={activeInterests.some((item) => item.id === interest.id)}
-              onClick={() => toggleStarterInterest(interest)}
+              onClick={() => {
+                startTransition(() => {
+                  toggleStarterInterest(interest)
+                })
+              }}
             />
           ))}
         </div>
@@ -1164,14 +1093,14 @@ function App() {
         </div>
 
         <div style={customStyles.infoBar}>
-          <span>{analysis.summary.categorized} auto-categorized</span>
-          <span>{analysis.summary.topInterestLabel} is leading</span>
+          <span>{infoBarPrimary}</span>
+          <span>{infoBarSecondary}</span>
         </div>
 
         <div style={customStyles.bookmarkList}>
           {visibleBookmarks.length === 0 ? (
             <div style={customStyles.emptyState}>
-              No bookmarks match the current filters. Change the category, content type, or search term.
+              {emptyStateMessage}
             </div>
           ) : (
             visibleBookmarks.map((bookmark) => (
@@ -1267,15 +1196,14 @@ function App() {
                   onChange={(event) => {
                     const nextValue = event.target.value
                     if (nextValue === '__auto__') {
-                      clearOverride(selectedBookmark.id)
+                      startTransition(() => {
+                        clearOverride(selectedBookmark.id)
+                      })
                       return
                     }
 
                     startTransition(() => {
-                      setOverrides((current) => ({
-                        ...current,
-                        [selectedBookmark.id]: nextValue,
-                      }))
+                      setOverride(selectedBookmark.id, nextValue)
                     })
                   }}
                 >

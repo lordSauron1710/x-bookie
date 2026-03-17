@@ -1,36 +1,40 @@
 # Deployment Policy
 
-x-bookie must remain easy to deploy as a frontend application while leaving room for secure future backend additions.
+x-bookie now ships as a frontend plus backend application.
 
 ## Current Deployment Shape
 
-- Framework: Vite + React
+- Frontend: Vite + React
+- Backend: Express
 - Standard build command: `npm run build`
-- Current runtime posture: frontend-first, local-first, no auth layer, no backend API, no database
+- Standard start command: `npm run start`
+- Runtime posture: X-only auth and bookmark sync, with in-memory backend storage
 
 ## Deployment Rules
 
-- Production deployments must use a production build.
-- Keep the app portable.
-  - No host-specific filesystem writes for runtime state.
-  - No long-lived machine-local assumptions.
-- Any future backend component must remain stateless or clearly document its hosting assumptions.
+- Production deployments must use the production build output.
+- Deploy the backend and frontend so cookie-based auth works correctly.
+  - Same-origin deployment is preferred when possible.
+- Do not rely on the in-memory store as the final production persistence model.
+- Any future durable backend component must document its hosting assumptions clearly.
 - Any new environment variable must be documented in [ENV_VARIABLES.md](./ENV_VARIABLES.md) and `README.md`.
-- Preview deployments must not silently point at privileged production services.
+- Preview deployments must not silently point at privileged production X apps.
 
 ## Security Baseline For Deployments
 
-- Serve security headers when deployment settings are introduced or changed:
+- Serve security headers in production:
   - `X-Content-Type-Options: nosniff`
   - `Referrer-Policy: strict-origin-when-cross-origin`
   - clickjacking protection via `X-Frame-Options` or CSP `frame-ancestors`
   - restrictive `Permissions-Policy` for unused browser features
 - Do not expose stack traces or debug mode in production.
 - Keep source maps private or intentionally managed if they are published.
+- Use production-safe cookie settings.
 
 ## Required Validation Before Release
 
 - [ ] `npm run build`
 - [ ] `npm run lint`
-- [ ] `README.md` reflects deploy or config changes
-- [ ] New external services or secrets are documented
+- [ ] `npm audit`
+- [ ] `README.md` reflects deploy and config changes
+- [ ] External services and secrets are documented

@@ -1,4 +1,4 @@
-import type { BookmarkRecord } from '../lib/bookmarks'
+import type { BookmarkRecord } from '../../shared/contracts.ts'
 
 export const demoBookmarks: BookmarkRecord[] = [
   {

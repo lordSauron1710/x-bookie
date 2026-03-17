@@ -1,11 +1,4 @@
-export type BookmarkRecord = {
-  id: string
-  text: string
-  author: string
-  handle: string
-  url: string
-  createdAt: string | null
-}
+import type { BookmarkRecord } from '../../shared/contracts.ts'
 
 export type InterestDefinition = {
   id: string

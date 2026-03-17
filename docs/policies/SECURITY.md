@@ -1,61 +1,64 @@
 # Security Policy
 
-x-bookie is currently a client-heavy React app that imports bookmark data locally and stores user state in the browser. The main risks today are unsafe future auth patterns, accidental secret exposure, client-side injection, unsafe backend additions, and over-trusting browser state.
+x-bookie is now a full-stack X-only application. The main risks are OAuth misconfiguration, token exposure, insecure session handling, unsafe future persistence, client-side injection, and over-trusting browser state.
 
 Treat security requirements as non-optional.
 
 ## Scope And Precedence
 
 - This file supplements [AGENTS.md](../../AGENTS.md); it does not replace it.
-- These rules should reinforce the product goal: a polished bookmark analysis app with a simple, intuitive workflow.
+- These rules should reinforce the product goal: a polished X bookmark analysis app with a simple, intuitive workflow.
 - Do not use this policy set to justify generic enterprise boilerplate that fights the current product shape.
 - If a security control affects UX, implement the safest version that still fits the repo's architecture and document the tradeoff.
 
 ## Current Security Posture
 
-- Bookmark parsing and categorization run in the browser.
-- There is no trusted backend in this repository today.
-- There is no auth layer, no API surface, and no database.
-- Local storage is a convenience layer only. It is not a secure store and not a trust boundary.
+- Bookmark analysis still runs in the browser.
+- X auth and bookmark sync happen through the Express backend.
+- Sessions use signed `HttpOnly` cookies.
+- X provider tokens stay server-side.
+- The current backend store is in-memory and not durable.
+- Browser `localStorage` is used only for interest profiles and overrides, not for auth or provider tokens.
 
 ## Core Rules
 
 - Never commit secrets.
-  - No API keys, tokens, session material, private URLs with credentials, or `.env*` files in git.
+  - No API keys, client secrets, tokens, session material, private URLs with credentials, or `.env*` files in git.
 - Treat all browser-delivered code as public.
   - Any value exposed to client code must be safe to expose.
+- Do not store X provider tokens in `localStorage`, `sessionStorage`, or query parameters.
 - Do not add unsafe browser sinks.
   - No `dangerouslySetInnerHTML` with untrusted content.
   - No `innerHTML`, `outerHTML`, `insertAdjacentHTML`, `eval`, `new Function`, or string-based timers for untrusted input.
-- Do not widen the attack surface casually.
-  - New auth, API, database, third-party scripts, analytics, or external embeds require policy updates in the same PR.
+- Keep auth and sync logic server-side.
+- Rate limit auth start and bookmark sync routes.
 - Prefer typed data and React rendering over manual DOM mutation.
 - Keep dependencies minimal and reviewable.
 
 ## Security Requirements For New Features
 
-- Any new auth or session work must follow [AUTH.md](./AUTH.md).
-- Any new backend or network-facing surface must follow [API.md](./API.md).
-- Any new synced storage or persistence layer must follow [DATABASE.md](./DATABASE.md).
-- Any new environment variable must be documented in [ENV_VARIABLES.md](./ENV_VARIABLES.md) and `README.md`.
-- Any deployment behavior change must be documented in [DEPLOYMENT.md](./DEPLOYMENT.md).
+- Auth and session changes must follow [AUTH.md](./AUTH.md).
+- Backend or handler changes must follow [API.md](./API.md).
+- Durable persistence must follow [DATABASE.md](./DATABASE.md).
+- New environment variables must be documented in [ENV_VARIABLES.md](./ENV_VARIABLES.md) and `README.md`.
+- Deployment behavior changes must be documented in [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## Browser And Deployment Baseline
 
-- Prefer security headers when deployment config is introduced or changed:
+- Serve security headers in production:
   - `X-Content-Type-Options: nosniff`
   - `Referrer-Policy: strict-origin-when-cross-origin`
   - clickjacking protection via `X-Frame-Options` or CSP `frame-ancestors`
   - restrictive `Permissions-Policy` for unused browser features
 - Do not load third-party scripts unless the product requires them and the data exposure is understood.
-- Do not expose debug behavior or stack traces in production-facing surfaces.
+- Do not expose debug behavior or stack traces in production-facing responses.
 
 ## Required Checks Before Merge
 
 - Review the diff for secrets, unsafe logs, and accidental credential exposure.
 - Run `npm run build`.
 - Run `npm run lint`.
-- If dependencies changed, run `npm audit`.
+- Run `npm audit` when dependencies change.
 - If a security-sensitive surface changed, update the relevant policy docs in the same PR.
 
 ## Reporting A Vulnerability
