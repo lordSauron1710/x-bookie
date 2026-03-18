@@ -231,4 +231,4 @@ Important ones:
 
 ## License
 
-License file has not been added yet.
+This project is licensed under the [MIT License](./LICENSE).
